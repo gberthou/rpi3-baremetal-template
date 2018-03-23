@@ -1,11 +1,10 @@
-#ifndef MAILBOX_H
-#define MAILBOX_H
+#ifndef DRIVERS_MAILBOX_H
+#define DRIVERS_MAILBOX_H
 
 #include <sys/types.h>
 
-void MailboxSend(uint8_t channel, uint32_t data);
-uint32_t MailboxReceive(uint8_t channel);
-void Mailbox3SendTag(uint32_t data);
+void mailbox_send(uint8_t channel, uint32_t data);
+uint32_t mailbox_receive(uint8_t channel);
 
 #endif
 

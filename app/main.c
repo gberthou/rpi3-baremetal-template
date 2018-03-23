@@ -60,7 +60,7 @@ void main0(void)
     {
         uart_print("Value =\r\n");
         print_hex(
-        spi_read_bidirectional()
+        spi_read_bidirectional(2)
         );
     }
 #endif

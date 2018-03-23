@@ -3,6 +3,9 @@
 
 #include <sys/types.h>
 
+/* This minimalistic driver only supports one SPI slave, to be wired to the spi_[ce|sclk|miso|mosi]_0 pins.
+ */
+
 enum spi_cs_mode_e
 {
     SPI_CS_ACTIVE_LOW = 0,
@@ -18,7 +21,15 @@ enum spi_data_mode_e
 };
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode);
-uint32_t spi_read_bidirectional(void);
+
+/* spi_read_bidirectional
+ * 1 <= bytecount <= 4
+ * SCLK is interrupted after each transferred byte, by software operation
+ * Slave chip is kept enabled during the whole transaction though
+ *        _  _  _  _  _  _  _  _        _  _  _  _  _  _  _  _
+ * SCLK _/ _/ _/ _/ _/ _/ _/ _/ _______/ _/ _/ _/ _/ _/ _/ _/ _
+ */
+uint32_t spi_read_bidirectional(size_t bytecount);
 
 #endif
 

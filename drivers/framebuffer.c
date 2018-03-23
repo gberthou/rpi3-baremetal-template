@@ -1,12 +1,12 @@
 #include "framebuffer.h"
 #include "mailbox.h"
 
-#define VIDEOBUS_OFFSET 0x80000000u
+static const uint32_t VIDEOBUS_OFFSET = 0x80000000u;
 
 /* Please see
  * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
  */
-int FBInit(struct FBInfo *fb, uint32_t width, uint32_t height)
+int fb_init(struct fb_info_t *fb, uint32_t width, uint32_t height)
 {
     volatile uint32_t __attribute__((aligned(16))) sequence[] = {
         0, // size of the whole structure
@@ -51,10 +51,10 @@ int FBInit(struct FBInfo *fb, uint32_t width, uint32_t height)
     
 
     // Send the requested values
-    MailboxSend(8, VIDEOBUS_OFFSET + ((uint32_t)sequence));
+    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence));
     
     // Now get the real values
-    if(MailboxReceive(8) == 0 || sequence[1] == 0x80000000) // Ok
+    if(mailbox_receive(8) == 0 || sequence[1] == 0x80000000) // Ok
     {
         volatile const uint32_t *ptr = sequence + 2;
         while(*ptr)
@@ -88,7 +88,7 @@ int FBInit(struct FBInfo *fb, uint32_t width, uint32_t height)
     return 1;
 }
 
-void FBPutColor(struct FBInfo *fb, uint32_t x, uint32_t y, uint32_t color)
+void fb_put_color(struct fb_info_t *fb, uint32_t x, uint32_t y, uint32_t color)
 {
     fb->ptr[x + y * (fb->pitch >> 2)] = color;
 }

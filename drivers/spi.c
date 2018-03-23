@@ -29,9 +29,9 @@ const unsigned int GPIO_MISO1 = 19;
 const unsigned int GPIO_SCLK1 = 21;
 */
 
-static volatile uint32_t * const SPI_CS   = (uint32_t*) 0x3F204000;
-static volatile uint32_t * const SPI_FIFO = (uint32_t*) 0x3F204004;
-static volatile uint32_t * const SPI_CLK  = (uint32_t*) 0x3F204008;
+static volatile uint32_t * const SPI_CS   = (uint32_t*) (PERIPHERAL_BASE + 0x00204000);
+static volatile uint32_t * const SPI_FIFO = (uint32_t*) (PERIPHERAL_BASE + 0x00204004);
+static volatile uint32_t * const SPI_CLK  = (uint32_t*) (PERIPHERAL_BASE + 0x00204008);
 #endif
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode)
@@ -55,13 +55,13 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
     return 0;
 }
 
-uint32_t spi_read_bidirectional(void)
+uint32_t spi_read_bidirectional(size_t bytecount)
 {
     uint32_t tmp = 0;
 
     *SPI_CS |= CS_REN | CS_TA;
 
-    for(unsigned int i = 0; i < 2; ++i)
+    while(bytecount--)
     {
         *SPI_FIFO = 0; // Dummy write to request read from slave
         while(!(*SPI_CS & CS_DONE));
