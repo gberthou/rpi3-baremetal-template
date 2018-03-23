@@ -1,0 +1,11 @@
+#ifndef MAILBOX_H
+#define MAILBOX_H
+
+#include <sys/types.h>
+
+void MailboxSend(uint8_t channel, uint32_t data);
+uint32_t MailboxReceive(uint8_t channel);
+void Mailbox3SendTag(uint32_t data);
+
+#endif
+
