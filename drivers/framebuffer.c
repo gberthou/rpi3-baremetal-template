@@ -1,7 +1,8 @@
 #include "framebuffer.h"
 #include "mailbox.h"
 
-static const uint32_t VIDEOBUS_OFFSET = 0x80000000u;
+static const uint32_t VIDEOBUS_OFFSET = 0x80000000;
+static const uint32_t CPU_ADDRESS     = 0x3e000000;
 
 /* Please see
  * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
@@ -71,7 +72,7 @@ int fb_init(struct fb_info_t *fb, uint32_t width, uint32_t height)
                     break;
 
                 case 0x40001:
-                    fb->ptr = (uint32_t*) ((ptr[2] & ~VIDEOBUS_OFFSET) | 0x3f000000);
+                    fb->ptr = (uint32_t*) ((ptr[2] & 0x00ffffff) | CPU_ADDRESS);
                     break;
 
                 case 0x48004:

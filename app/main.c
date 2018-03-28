@@ -37,19 +37,20 @@ void main0(void)
     uart_init_1415();
 
     uart_print("Hello world!\r\n");
-#if 0
+#if 1
 
-    struct FBInfo fb;
+    struct fb_info_t fb;
 
-    uart_print("FBInit:\r\n");
-    int ret = FBInit(&fb, 600, 480);
+    uart_print("fb_init:\r\n");
+    int ret = fb_init(&fb, 640, 480);
     print_hex(ret);
+
 
     uart_print("Done!\r\n");
 
     for(uint32_t y = 0; y < 480; ++y)
         for(uint32_t x = 0; x < 600; ++x)
-            FBPutColor(&fb, x, y, 0xff00ffff);
+            fb_put_color(&fb, x, y, 0xff00ffff);
 
     for(;;);
 #else
