@@ -38,8 +38,8 @@ start_core3:
     b done
 
 core0stack: .word 0x00008000
-core1stack: .word 0x00007800
-core2stack: .word 0x00007600
+core1stack: .word 0x00007c00
+core2stack: .word 0x00007800
 core3stack: .word 0x00007400
 
 .global UndefinedHandler
