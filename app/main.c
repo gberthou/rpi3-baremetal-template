@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "../core/irq.h"
+
 #include "../drivers/gpio.h"
 #include "../drivers/uart.h"
 #include "../drivers/systimer.h"
@@ -53,6 +55,8 @@ void main0(void)
     uart_init_1415();
 
     uart_print("Hello world!\r\n");
+
+    IRQ_ENABLE();
 
     //screen_demo();
 
