@@ -14,28 +14,6 @@ static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
 
-static void u64_to_hex(char *dst, uint64_t x)
-{
-    static const char FIGURES[] = "0123456789abcdef";
-
-    for(unsigned int i = 0; i < 16; ++i)
-    {
-        dst[15 - i] = FIGURES[x & 0xf];
-        x >>= 4;
-    }
-}
-
-static void print_hex(uint64_t x)
-{
-    char tmp[19];
-    tmp[16] = '\r';
-    tmp[17] = '\n';
-    tmp[18] = 0;
-
-    u64_to_hex(tmp, x);
-    uart_print(tmp);
-}
-
 /*
 static void screen_demo(void)
 {
@@ -75,9 +53,9 @@ void main0(void)
     for(;;)
     {
         uart_print("Ticks =\r\n");
-        print_hex(ticks);
-        print_hex(cpt0);
-        print_hex(cpt1);
+        uart_print_hex(ticks);
+        uart_print_hex(cpt0);
+        uart_print_hex(cpt1);
     }
 #endif
 }
