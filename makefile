@@ -27,7 +27,6 @@ $(OBJDIR)/%.o : %.c
 	$(ARM)-gcc $(CFLAGS) $(INCDIR) -c $< -o $@ $(DEFINES)
 
 default: $(LDSCRIPT) $(OBJS)
-	echo $(CFILES)
 	$(ARM)-gcc $(LDFLAGS) $(OBJS) -o $(BIN).elf $(LIBDIR) -T $(LDSCRIPT)
 	$(ARM)-objcopy $(BIN).elf -O binary $(BIN).img
 	$(ARM)-objdump -D $(BIN).elf > $(DISASDIR)/$(BIN)

@@ -10,9 +10,19 @@
 
 #define CPUFREQ 800000000ul
 
+#define GPIO_TEST 26
+
 static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
+
+void __attribute__((__naked__)) IRQHandler(void)
+{
+    __asm__ __volatile__("push {r0-r5, r12}");
+    --cpt1;
+    __asm__ __volatile__("pop {r0-r5, r12}\r\n"
+                         "subs pc, lr, #4");
+}
 
 /*
 static void screen_demo(void)
@@ -27,9 +37,17 @@ static void screen_demo(void)
 }
 */
 
+static void init_gpio(void)
+{
+    gpio_select_function(GPIO_TEST, GPIO_INPUT);
+    gpio_set_resistor(GPIO_TEST, GPIO_RESISTOR_PULLUP);
+    gpio_set_async_edge_detect(GPIO_TEST, GPIO_FALLING_EDGE, 1);
+}
+
 void main0(void)
 {
     /* This code is going to be run on core 0 */
+    init_gpio();
     uart_init_1415();
 
     uart_print("Hello world!\r\n");
@@ -83,6 +101,6 @@ void main3(void)
     /* This code is going to be run on core 3 */
     for(;;)
     {
-        --cpt1;
+        //--cpt1;
     }
 }

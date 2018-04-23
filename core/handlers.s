@@ -3,8 +3,17 @@
 start:
     ;@ Assumes that processor is in AArch32 mode, i.e., arm_core & 0x200 == 0
 
-    ;@ mrc p15, 0, r4, c0, c0, 5 ;@ r4 = MPIDR
-
+    ;@ Zero bss section
+    ldr r0, =__bss_begin
+    ldr r1, =__bss_end
+    mov r2, #0
+bssloop:
+    cmp r0, r1
+    beq launch
+    str r2, [r0], #4
+    b bssloop
+    
+launch:
     mov r4, #0x40000000
 
     ldr r5, =start_core1
@@ -57,8 +66,8 @@ DataHandler:      b DataHandler
 .global UnusedHandler
 UnusedHandler:    b UnusedHandler
 
-.global IRQHandler
-IRQHandler:       b IRQHandler
+;@.global IRQHandler
+;@IRQHandler:       b IRQHandler
 
 .global FIQHandler
 FIQHandler:       b FIQHandler

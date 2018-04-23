@@ -25,7 +25,10 @@ SECTIONS
 
 	.bss : ALIGN(4)
     {
+        __bss_begin = .;
 		*(.bss .bss.*)
+        . = ALIGN(4);
+        __bss_end = .;
 	} > KERNEL
 }
 
