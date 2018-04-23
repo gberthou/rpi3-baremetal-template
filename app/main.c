@@ -2,13 +2,12 @@
 
 #include "../core/irq.h"
 
+#include "../drivers/interrupt.h"
 #include "../drivers/gpio.h"
 #include "../drivers/uart.h"
 #include "../drivers/systimer.h"
 #include "../drivers/framebuffer.h"
 #include "../drivers/spi.h"
-
-#define CPUFREQ 800000000ul
 
 #define GPIO_TEST 26
 
@@ -16,11 +15,15 @@ static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
 
+#define GPEDS0 (*((volatile uint32_t*)(PERIPHERAL_BASE + 0x00200040)))
+
 void __attribute__((__naked__)) IRQHandler(void)
 {
-    __asm__ __volatile__("push {r0-r5, r12}");
+    __asm__ __volatile__("push {r0-r5, r12, lr}");
+    for(;;) uart_print("Hello world!\r\n");
+    gpio_ack_interrupt(GPIO_TEST);
     --cpt1;
-    __asm__ __volatile__("pop {r0-r5, r12}\r\n"
+    __asm__ __volatile__("pop {r0-r5, r12, lr}\r\n"
                          "subs pc, lr, #4");
 }
 
@@ -42,6 +45,8 @@ static void init_gpio(void)
     gpio_select_function(GPIO_TEST, GPIO_INPUT);
     gpio_set_resistor(GPIO_TEST, GPIO_RESISTOR_PULLUP);
     gpio_set_async_edge_detect(GPIO_TEST, GPIO_FALLING_EDGE, 1);
+
+    interrupt_enable(INT_SOURCE_GPIO);
 }
 
 void main0(void)
@@ -68,12 +73,15 @@ void main0(void)
         );
     }
 #else
+
+    uint32_t flags = 0;
     for(;;)
     {
         uart_print("Ticks =\r\n");
         uart_print_hex(ticks);
         uart_print_hex(cpt0);
         uart_print_hex(cpt1);
+        uart_print_hex(flags |= GPEDS0);
     }
 #endif
 }
