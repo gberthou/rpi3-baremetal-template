@@ -4,9 +4,9 @@ BIN=kernel7
 OBJDIR=obj
 DISASDIR=disas
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -march=armv7-a -marm -mthumb-interwork -O2
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7 -marm -mthumb-interwork -O2
 
-ASFLAGS=-march=armv7-a
+ASFLAGS=-mcpu=cortex-a7
 
 LDFLAGS=-nostartfiles
 
