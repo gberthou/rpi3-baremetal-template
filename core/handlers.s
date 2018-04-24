@@ -30,10 +30,12 @@ start:
     eret
 
 boot:
+    ;@ Keep this iff solution 2
     cps #0x12         ;@ Switch to IRQ mode
     ldr sp, #irqstack ;@ Set IRQ stack
     cps #0x13         ;@ Switch to SVC mode
 
+    ;@ Keep this iff solution 2
     ;@ Init interrupt vector base address
     mov r0, #0x8000
     mcr p15, 0, r0, c12, c0, 0 ;@ VBAR

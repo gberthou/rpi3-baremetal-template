@@ -15,36 +15,15 @@ static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
 
-static void uart_print_cpsr(void)
-{
-    __asm__ __volatile__("push {r0}\r\n"
-                         "mrs r0, cpsr\r\n"
-                         "bl uart_print_hex\r\n"
-                         "pop {r0}");
-}
-
-static void uart_print_lr(void)
-{
-    __asm__ __volatile__("push {r0}\r\n"
-                         "mov r0, lr\r\n"
-                         "bl uart_print_hex\r\n"
-                         "pop {r0}");
-}
-
-#define GPEDS0 (*((volatile uint32_t*)(PERIPHERAL_BASE + 0x00200040)))
-
 void __attribute__((__naked__)) IRQHandler(void)
 {
     __asm__ __volatile__("push {r0-r5, r12, lr}");
-    uart_print("Interrupt\r\n");
-    uart_print_cpsr();
-    uart_print_lr();
-    uart_print_hex(--cpt1);
 
     gpio_ack_interrupt(GPIO_TEST);
+    --cpt1;
+
     __asm__ __volatile__("pop {r0-r5, r12, lr}\r\n"
                          "subs pc, lr, #4");
-                         //"eret");
 }
 
 /*
@@ -77,8 +56,6 @@ void main0(void)
 
     uart_print("Hello world!\r\n");
 
-    uart_print_cpsr();
-
     IRQ_ENABLE();
 
     //screen_demo();
@@ -96,14 +73,12 @@ void main0(void)
     }
 #else
 
-    uint32_t flags = 0;
     for(;;)
     {
         uart_print("Ticks =\r\n");
         uart_print_hex(ticks);
         uart_print_hex(cpt0);
         uart_print_hex(cpt1);
-        uart_print_hex(flags |= GPEDS0);
     }
 #endif
 }
