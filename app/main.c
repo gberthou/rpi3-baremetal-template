@@ -15,6 +15,12 @@ static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
 
+static volatile uint32_t cpsr1 = ~0u;
+static volatile uint32_t cpsr2 = ~0u;
+static volatile uint32_t cpsr3 = ~0u;
+
+#define get_cpsr(x) __asm__ __volatile__("mrs %0, cpsr" : "=r"(x))
+
 void __attribute__((__naked__)) IRQHandler(void)
 {
     __asm__ __volatile__("push {r0-r5, r12, lr}");
@@ -79,6 +85,14 @@ void main0(void)
         uart_print_hex(ticks);
         uart_print_hex(cpt0);
         uart_print_hex(cpt1);
+        uart_print("--------\r\n");
+
+        register uint32_t cpsr0;
+        get_cpsr(cpsr0);
+        uart_print_hex(cpsr0);
+        uart_print_hex(cpsr1);
+        uart_print_hex(cpsr2);
+        uart_print_hex(cpsr3);
     }
 #endif
 }
@@ -86,6 +100,8 @@ void main0(void)
 void main1(void)
 {
     /* This code is going to be run on core 1 */
+
+    get_cpsr(cpsr1);
     for(;;)
     {
         ticks = systimer_getticks();
@@ -95,6 +111,7 @@ void main1(void)
 void main2(void)
 {
     /* This code is going to be run on core 2 */
+    get_cpsr(cpsr2);
     for(;;)
     {
         ++cpt0;
@@ -104,6 +121,7 @@ void main2(void)
 void main3(void)
 {
     /* This code is going to be run on core 3 */
+    get_cpsr(cpsr3);
     for(;;)
     {
         //--cpt1;

@@ -16,18 +16,18 @@ start:
     ;@ Solution 2: return from HYP at boot mode   
     cpsid if
     ;@ 1. check if core in HYP mode
-    mrs r0, cpsr ;@ r0 = cpsr
+    mrs r0, cpsr      ;@ r0 = cpsr
     and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
     mov r2, #0x1a
-    cmp r1, r2 ;@ if mode bits != 0x1a (HYP mode)
-    bne boot
+    cmp r1, r2        ;@ if mode bits != 0x1a (HYP mode)
+    bne boot          ;@ Jump to normal boot without caring about the mode
     ;@ 2. return from HYP mode
     ldr r1, =boot
-    msr ELR_hyp, r1
+    msr ELR_hyp, r1   ;@ After eret instruction, pc = address of "boot" label
     bic r1, r0, #0x1f ;@ r1 = cpsr with mode 0x00
     orr r1, r1, #0x13 ;@ r1 = cpsr with mode 0x13 (SVC)
-    msr SPSR_hyp, r1
-    eret
+    msr SPSR_hyp, r1  ;@ After eret instruction, cpsr = r1 = old cpsr with mode SVC
+    eret ;@ Return from HYP exception
 
 boot:
     ;@ Keep this iff solution 2
@@ -54,12 +54,15 @@ launch:
     mov r4, #0x40000000
 
     ldr r5, =start_core1
+    ;@ Comment out to "disable" core 1
     str r5, [r4, #0x9c]
 
     ldr r5, =start_core2
+    ;@ Comment out to "disable" core 2
     str r5, [r4, #0xac]
 
     ldr r5, =start_core3
+    ;@ Comment out to "disable" core 3
     str r5, [r4, #0xbc]
 
     ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
