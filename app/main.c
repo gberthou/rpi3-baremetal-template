@@ -43,8 +43,8 @@ void __attribute__((__naked__)) IRQHandler(void)
 
     gpio_ack_interrupt(GPIO_TEST);
     __asm__ __volatile__("pop {r0-r5, r12, lr}\r\n"
-                         //"subs pc, elr, #4");
-                         "eret");
+                         "subs pc, lr, #4");
+                         //"eret");
 }
 
 /*
@@ -77,10 +77,7 @@ void main0(void)
 
     uart_print("Hello world!\r\n");
 
-    __asm__ __volatile__("push {r0}\r\n"
-                         "mrs r0, cpsr\r\n"
-                         "bl uart_print_hex\r\n"
-                         "pop {r0}");
+    uart_print_cpsr();
 
     IRQ_ENABLE();
 

@@ -10,26 +10,34 @@ start:
     ;@ the same as for the other arm modes. But you might need to use "eret"
     ;@ instruction to return from HYP-interrupt rather than
     ;@ usual "subs pc, lr, #4"
-    mov r0, #0x8000
-    mcr p15, 4, r0, c12, c0, 0
+    ;@mov r0, #0x8000
+    ;@mcr p15, 4, r0, c12, c0, 0 ;@ HVBAR
 
     ;@ Solution 2: return from HYP at boot mode   
+    cpsid if
     ;@ 1. check if core in HYP mode
-    ;@cpsid if
-    ;@mrs r0, cpsr ;@ r0 = cpsr
-    ;@and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
-    ;@mov r2, #0x1a
-    ;@cmp r1, r2 ;@ if mode bits != 0x1a (HYP mode)
-    ;@bne boot
+    mrs r0, cpsr ;@ r0 = cpsr
+    and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
+    mov r2, #0x1a
+    cmp r1, r2 ;@ if mode bits != 0x1a (HYP mode)
+    bne boot
     ;@ 2. return from HYP mode
-    ;@ldr r1, =boot
-    ;@msr ELR_hyp, r1
-    ;@and r1, r0, 0xffffffe0 ;@ r1 = cpsr with mode 0x00
-    ;@orr r1, r1, #0x13      ;@ r1 = cpsr with mode 0x13 (SVC)
-    ;@msr SPSR_hyp, r1
-    ;@eret
+    ldr r1, =boot
+    msr ELR_hyp, r1
+    bic r1, r0, #0x1f ;@ r1 = cpsr with mode 0x00
+    orr r1, r1, #0x13 ;@ r1 = cpsr with mode 0x13 (SVC)
+    msr SPSR_hyp, r1
+    eret
 
 boot:
+    cps #0x12         ;@ Switch to IRQ mode
+    ldr sp, #irqstack ;@ Set IRQ stack
+    cps #0x13         ;@ Switch to SVC mode
+
+    ;@ Init interrupt vector base address
+    mov r0, #0x8000
+    mcr p15, 0, r0, c12, c0, 0 ;@ VBAR
+
     ;@ Zero bss section
     ldr r0, =__bss_begin
     ldr r1, =__bss_end
@@ -52,24 +60,24 @@ launch:
     ldr r5, =start_core3
     str r5, [r4, #0xbc]
 
-    ldr sp, #core0stack     ;@  set sp of core 0
+    ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
     bl main0
 
 done:
     b done
 
 start_core1:
-    ldr sp, #core1stack     ;@  set sp of core 1
+    ldr sp, #core1stack     ;@  set sp of core 1 (SVC)
     bl main1
     b done
 
 start_core2:
-    ldr sp, #core2stack     ;@  set sp of core 2
+    ldr sp, #core2stack     ;@  set sp of core 2 (SVC)
     bl main2
     b done
 
 start_core3:
-    ldr sp, #core3stack     ;@  set sp of core 3
+    ldr sp, #core3stack     ;@  set sp of core 3 (SVC)
     bl main3
     b done
 
@@ -77,6 +85,8 @@ core0stack: .word 0x00008000
 core1stack: .word 0x00007c00
 core2stack: .word 0x00007800
 core3stack: .word 0x00007400
+
+irqstack: .word 0x00007000
 
 .global UndefinedHandler
 UndefinedHandler:
