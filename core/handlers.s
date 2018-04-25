@@ -1,4 +1,36 @@
 .section .text
+
+enable_svc_mode:
+    ;@ Solution 2: return from HYP at boot mode   
+    cpsid if
+    ;@ 1. check if core in HYP mode
+    mrs r0, cpsr      ;@ r0 = cpsr
+    and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
+    mov r2, #0x1a
+    cmp r1, r2        ;@ if mode bits != 0x1a (HYP mode)
+    bxne lr           ;@ Return = jump to normal boot without caring about the mode
+    ;@ 2. return from HYP mode
+    mov r1, lr        ;@ r1 = return address
+    msr ELR_hyp, r1   ;@ After eret instruction, pc = address of "boot" label
+    bic r1, r0, #0x1f ;@ r1 = cpsr with mode 0x00
+    orr r1, r1, #0x13 ;@ r1 = cpsr with mode 0x13 (SVC)
+    msr SPSR_hyp, r1  ;@ After eret instruction, cpsr = r1 = old cpsr with mode SVC
+    eret ;@ Return from HYP exception
+
+;@ Assumes that the caller is in SVC mode (lr register is banked)
+init_irq:
+    ;@ Keep this iff solution 2
+    cps #0x12         ;@ Switch to IRQ mode
+    ldr sp, #irqstack ;@ Set IRQ stack
+    cps #0x13         ;@ Switch to SVC mode
+
+    ;@ Keep this iff solution 2
+    ;@ Init interrupt vector base address
+    mov r0, #0x8000
+    mcr p15, 0, r0, c12, c0, 0 ;@ VBAR
+    
+    bx lr ;@ Return
+
 .global start
 start:
     ;@ Assumes that processor is in AArch32 mode, i.e., arm_core & 0x200 == 0
@@ -13,32 +45,6 @@ start:
     ;@mov r0, #0x8000
     ;@mcr p15, 4, r0, c12, c0, 0 ;@ HVBAR
 
-    ;@ Solution 2: return from HYP at boot mode   
-    cpsid if
-    ;@ 1. check if core in HYP mode
-    mrs r0, cpsr      ;@ r0 = cpsr
-    and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
-    mov r2, #0x1a
-    cmp r1, r2        ;@ if mode bits != 0x1a (HYP mode)
-    bne boot          ;@ Jump to normal boot without caring about the mode
-    ;@ 2. return from HYP mode
-    ldr r1, =boot
-    msr ELR_hyp, r1   ;@ After eret instruction, pc = address of "boot" label
-    bic r1, r0, #0x1f ;@ r1 = cpsr with mode 0x00
-    orr r1, r1, #0x13 ;@ r1 = cpsr with mode 0x13 (SVC)
-    msr SPSR_hyp, r1  ;@ After eret instruction, cpsr = r1 = old cpsr with mode SVC
-    eret ;@ Return from HYP exception
-
-boot:
-    ;@ Keep this iff solution 2
-    cps #0x12         ;@ Switch to IRQ mode
-    ldr sp, #irqstack ;@ Set IRQ stack
-    cps #0x13         ;@ Switch to SVC mode
-
-    ;@ Keep this iff solution 2
-    ;@ Init interrupt vector base address
-    mov r0, #0x8000
-    mcr p15, 0, r0, c12, c0, 0 ;@ VBAR
 
     ;@ Zero bss section
     ldr r0, =__bss_begin
@@ -65,6 +71,9 @@ launch:
     ;@ Comment out to "disable" core 3
     str r5, [r4, #0xbc]
 
+    ;@ This portion of code is only run by core 0
+    bl enable_svc_mode
+    bl init_irq
     ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
     bl main0
 
@@ -72,16 +81,22 @@ done:
     b done
 
 start_core1:
+    bl enable_svc_mode
+    bl init_irq
     ldr sp, #core1stack     ;@  set sp of core 1 (SVC)
     bl main1
     b done
 
 start_core2:
+    bl enable_svc_mode
+    bl init_irq
     ldr sp, #core2stack     ;@  set sp of core 2 (SVC)
     bl main2
     b done
 
 start_core3:
+    bl enable_svc_mode
+    bl init_irq
     ldr sp, #core3stack     ;@  set sp of core 3 (SVC)
     bl main3
     b done
