@@ -13,13 +13,13 @@
 #define IBRD_VALUE ((unsigned int) BRD_VALUE)
 #define FBRD_VALUE ((unsigned int) ((BRD_VALUE - IBRD_VALUE) * 64.f + 0.5f))
 
-volatile uint32_t * const DR   = (uint32_t*)(UART_BASE + 0x00);
-volatile uint32_t * const FR   = (uint32_t*)(UART_BASE + 0x18);
-volatile uint32_t * const IBRD = (uint32_t*)(UART_BASE + 0x24);
-volatile uint32_t * const FBRD = (uint32_t*)(UART_BASE + 0x28);
-volatile uint32_t * const LCRH = (uint32_t*)(UART_BASE + 0x2c);
-volatile uint32_t * const CR   = (uint32_t*)(UART_BASE + 0x30);
-volatile uint32_t * const ICR  = (uint32_t*)(UART_BASE + 0x44);
+#define DR   ((volatile uint32_t*)(UART_BASE + 0x00))
+#define FR   ((volatile uint32_t*)(UART_BASE + 0x18))
+#define IBRD ((volatile uint32_t*)(UART_BASE + 0x24))
+#define FBRD ((volatile uint32_t*)(UART_BASE + 0x28))
+#define LCRH ((volatile uint32_t*)(UART_BASE + 0x2c))
+#define CR   ((volatile uint32_t*)(UART_BASE + 0x30))
+#define ICR  ((volatile uint32_t*)(UART_BASE + 0x44))
 
 /* Most of the code is inspired from https://github.com/dwelch67/raspberrypi/blob/master/uartx01/uartx01.c */
 

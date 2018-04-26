@@ -14,12 +14,12 @@
 #define memoryBarrier() __asm__ volatile("dsb")
 #endif
 
-static const uint32_t MAIL_EMPTY = (1u << 30);
-static const uint32_t MAIL_FULL  = (1u << 31);
+#define MAIL_EMPTY (1u << 30)
+#define MAIL_FULL  (1u << 31)
 
-static volatile uint32_t * const MAIL0_READ   = (uint32_t*) (PERIPHERAL_BASE + 0x0000b880);
-static volatile uint32_t * const MAIL0_STATUS = (uint32_t*) (PERIPHERAL_BASE + 0x0000b898);
-static volatile uint32_t * const MAIL0_WRITE  = (uint32_t*) (PERIPHERAL_BASE + 0x0000b8A0);
+#define MAIL0_READ   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b880))
+#define MAIL0_STATUS ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b898))
+#define MAIL0_WRITE  ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b8A0))
 
 static inline void wait_for_mailbox_non_full(void)
 {

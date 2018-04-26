@@ -1,8 +1,8 @@
 #include "framebuffer.h"
 #include "mailbox.h"
 
-static const uint32_t VIDEOBUS_OFFSET = 0x80000000;
-static const uint32_t CPU_ADDRESS     = 0x3e000000;
+#define VIDEOBUS_OFFSET 0x80000000
+#define CPU_ADDRESS     0x3e000000
 
 /* Please see
  * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface

@@ -2,37 +2,33 @@
 #include "common.h"
 #include "gpio.h"
 
-const uint32_t BASE_SPI_FREQ_HZ = 250000000;
+#define BASE_SPI_FREQ_HZ 250000000
 
-const uint32_t CS_DONE = (1 << 16);
-const uint32_t CS_REN = (1 << 12);
-const uint32_t CS_TA = (1 << 7);
-
-#if 0
-#else
+#define CS_DONE (1 << 16)
+#define CS_REN  (1 << 12)
+#define CS_TA   (1 << 7)
 
 // CE0  = gpio8 -> alt0
 // MOSI = gpio10 -> alt0
 // MISO = gpio9 -> alt0 
 // SCLK = gpio11 -> alt0
 
-const unsigned int GPIO_CE0 = 8;
-const unsigned int GPIO_MOSI0 = 10;
-const unsigned int GPIO_MISO0 = 9;
-const unsigned int GPIO_SCLK0 = 11;
+#define GPIO_CE0   8
+#define GPIO_MOSI0 10
+#define GPIO_MISO0 9
+#define GPIO_SCLK0 11
 
 /*
 ALT4
-const unsigned int GPIO_CE1 = 7;
-const unsigned int GPIO_MOSI1 = 20;
-const unsigned int GPIO_MISO1 = 19;
-const unsigned int GPIO_SCLK1 = 21;
+#define GPIO_CE1   7
+#define GPIO_MOSI1 20
+#define GPIO_MISO1 19
+#define GPIO_SCLK1 21
 */
 
-static volatile uint32_t * const SPI_CS   = (uint32_t*) (PERIPHERAL_BASE + 0x00204000);
-static volatile uint32_t * const SPI_FIFO = (uint32_t*) (PERIPHERAL_BASE + 0x00204004);
-static volatile uint32_t * const SPI_CLK  = (uint32_t*) (PERIPHERAL_BASE + 0x00204008);
-#endif
+#define SPI_CS   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204000))
+#define SPI_FIFO ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204004))
+#define SPI_CLK  ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204008))
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode)
 {

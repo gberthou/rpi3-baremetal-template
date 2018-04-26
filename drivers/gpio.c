@@ -1,14 +1,14 @@
 #include "common.h"
 #include "gpio.h"
 
-volatile uint32_t * const GPFSEL0   = (uint32_t*) (PERIPHERAL_BASE + 0x00200000);
-volatile uint32_t * const GPSET0    = (uint32_t*) (PERIPHERAL_BASE + 0x0020001C);
-volatile uint32_t * const GPCLR0    = (uint32_t*) (PERIPHERAL_BASE + 0x00200028);
-volatile uint32_t * const GPPUD     = (uint32_t*) (PERIPHERAL_BASE + 0x00200094);
-volatile uint32_t * const GPPUDCLK0 = (uint32_t*) (PERIPHERAL_BASE + 0x00200098);
-volatile uint32_t * const GPAREN0   = (uint32_t*) (PERIPHERAL_BASE + 0x0020007C);
-volatile uint32_t * const GPAFEN0   = (uint32_t*) (PERIPHERAL_BASE + 0x00200088);
-volatile uint32_t * const GPEDS0    = (uint32_t*) (PERIPHERAL_BASE + 0x00200040);
+#define GPFSEL0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200000))
+#define GPSET0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020001C))
+#define GPCLR0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200028))
+#define GPPUD     ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200094))
+#define GPPUDCLK0 ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200098))
+#define GPAREN0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020007C))
+#define GPAFEN0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200088))
+#define GPEDS0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200040))
 
 void gpio_select_function(unsigned int gpio, enum gpio_function_e function)
 {
