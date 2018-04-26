@@ -1,30 +1,28 @@
 .section .text
 
 enable_svc_mode:
-    ;@ Solution 2: return from HYP at boot mode   
     cpsid if
     ;@ 1. check if core in HYP mode
     mrs r0, cpsr      ;@ r0 = cpsr
     and r1, r0, #0x1f ;@ r1 = mode bits of cpsr (0-4)
     mov r2, #0x1a
     cmp r1, r2        ;@ if mode bits != 0x1a (HYP mode)
-    bxne lr           ;@ Return = jump to normal boot without caring about the mode
+    bxne lr           ;@ Return = jump to normal boot without caring about the
+                      ;@ mode
     ;@ 2. return from HYP mode
-    mov r1, lr        ;@ r1 = return address
-    msr ELR_hyp, r1   ;@ After eret instruction, pc = address of "boot" label
+    msr ELR_hyp, lr   ;@ After eret instruction, pc = return address
     bic r1, r0, #0x1f ;@ r1 = cpsr with mode 0x00
     orr r1, r1, #0x13 ;@ r1 = cpsr with mode 0x13 (SVC)
-    msr SPSR_hyp, r1  ;@ After eret instruction, cpsr = r1 = old cpsr with mode SVC
+    msr SPSR_hyp, r1  ;@ After eret instruction, cpsr = r1 = old cpsr with mode
+                      ;@ SVC
     eret ;@ Return from HYP exception
 
 ;@ Assumes that the caller is in SVC mode (lr register is banked)
 init_irq:
-    ;@ Keep this iff solution 2
     cps #0x12         ;@ Switch to IRQ mode
     ldr sp, #irqstack ;@ Set IRQ stack
     cps #0x13         ;@ Switch to SVC mode
 
-    ;@ Keep this iff solution 2
     ;@ Init interrupt vector base address
     mov r0, #0x8000
     mcr p15, 0, r0, c12, c0, 0 ;@ VBAR
@@ -37,14 +35,6 @@ start:
 
     ;@ /!\ RPI 2/3's firmware puts arm core in HYP mode (cps #0x1a) which has
     ;@ another vector than the other arm modes.
-
-    ;@ Solution 1: stay in HYP mode and simply make HYP's interrupt vector base
-    ;@ the same as for the other arm modes. But you might need to use "eret"
-    ;@ instruction to return from HYP-interrupt rather than
-    ;@ usual "subs pc, lr, #4"
-    ;@mov r0, #0x8000
-    ;@mcr p15, 4, r0, c12, c0, 0 ;@ HVBAR
-
 
     ;@ Zero bss section
     ldr r0, =__bss_begin
