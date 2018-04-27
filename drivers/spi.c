@@ -59,7 +59,7 @@ uint32_t spi_read_bidirectional(size_t bytecount)
 
     while(bytecount--)
     {
-        *SPI_FIFO = 0; // Dummy write to request read from slave
+        *SPI_FIFO = 0xff; // Dummy write to request read from slave
         while(!(*SPI_CS & CS_DONE));
         tmp = (tmp << 8) | *SPI_FIFO;
     }

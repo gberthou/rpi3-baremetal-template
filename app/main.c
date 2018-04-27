@@ -8,6 +8,7 @@
 #include "../drivers/systimer.h"
 #include "../drivers/framebuffer.h"
 #include "../drivers/spi.h"
+#include "../drivers/adc121s101.h"
 
 #define GPIO_TEST 26
 
@@ -53,6 +54,7 @@ void main0(void)
     /* This code is going to be run on core 0 */
     init_gpio();
     uart_init_1415();
+    adc_init();
 
     uart_print("Hello world!\r\n");
 
@@ -75,6 +77,9 @@ void main0(void)
 
     for(;;)
     {
+        cpt0 = adc_read();
+        for(unsigned int i = 0; i < 10000; ++i) __asm__ __volatile__("nop");
+
         uart_print("Ticks =\r\n");
         uart_print_hex(ticks);
         uart_print_hex(cpt0);
@@ -95,9 +100,9 @@ void main1(void)
 void main2(void)
 {
     /* This code is going to be run on core 2 */
+
     for(;;)
     {
-        ++cpt0;
     }
 }
 
