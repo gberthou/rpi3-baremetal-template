@@ -1,7 +1,7 @@
 #include "adc121s101.h"
 #include "spi.h"
 
-#define SCLK_FREQ_HZ 2000000
+#define SCLK_FREQ_HZ 20000000
 
 // Datasheet
 // http://www.ti.com/lit/ds/symlink/adc121s101.pdf
@@ -15,6 +15,6 @@ uint32_t adc_init(void)
 
 uint32_t adc_read(void)
 {
-    return spi_read_bidirectional(2);
+    return spi_read16_bidirectional() & 0x0fff;
 }
 

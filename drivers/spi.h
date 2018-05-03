@@ -22,14 +22,14 @@ enum spi_data_mode_e
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode);
 
-/* spi_read_bidirectional
- * 1 <= bytecount <= 4
+/* spi_read16_bidirectional
+ * Reads 2 bytes from spi slabe.
  * SCLK is interrupted after each transferred byte, by software operation
  * Slave chip is kept enabled during the whole transaction though
  *        _  _  _  _  _  _  _  _        _  _  _  _  _  _  _  _
  * SCLK _/ _/ _/ _/ _/ _/ _/ _/ _______/ _/ _/ _/ _/ _/ _/ _/ _
  */
-uint32_t spi_read_bidirectional(size_t bytecount);
+uint32_t spi_read16_bidirectional(void);
 
 #endif
 

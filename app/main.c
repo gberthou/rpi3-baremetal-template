@@ -49,6 +49,12 @@ static void init_gpio(void)
     interrupt_enable(INT_SOURCE_GPIO);
 }
 
+static void wait_us(uint32_t us)
+{
+   uint64_t tend = systimer_getticks() + us;
+   while(systimer_getticks() < tend);
+}
+
 void main0(void)
 {
     /* This code is going to be run on core 0 */
@@ -62,30 +68,16 @@ void main0(void)
 
     //screen_demo();
 
-#if 0
-    uart_print("spi_init\r\n");
-    spi_init(1000000, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
-
-    for(;;)
-    {
-        uart_print("Value =\r\n");
-        print_hex(
-        spi_read_bidirectional(2)
-        );
-    }
-#else
-
     for(;;)
     {
         cpt0 = adc_read();
-        for(unsigned int i = 0; i < 10000; ++i) __asm__ __volatile__("nop");
+        wait_us(1);
 
         uart_print("Ticks =\r\n");
         uart_print_hex(ticks);
         uart_print_hex(cpt0);
         uart_print_hex(cpt1);
     }
-#endif
 }
 
 void main1(void)

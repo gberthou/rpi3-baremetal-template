@@ -4,6 +4,7 @@
 
 #define BASE_SPI_FREQ_HZ 250000000
 
+#define CS_RXD (1 << 17)
 #define CS_DONE (1 << 16)
 #define CS_REN  (1 << 12)
 #define CS_TA   (1 << 7)
@@ -51,20 +52,19 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
     return 0;
 }
 
-uint32_t spi_read_bidirectional(size_t bytecount)
+uint32_t spi_read16_bidirectional(void)
 {
-    uint32_t tmp = 0;
-
     *SPI_CS |= CS_REN | CS_TA;
 
-    while(bytecount--)
-    {
-        *SPI_FIFO = 0xff; // Dummy write to request read from slave
-        while(!(*SPI_CS & CS_DONE));
-        tmp = (tmp << 8) | *SPI_FIFO;
-    }
+    *SPI_FIFO = 0xff; // Dummy write to request read from slave
+    *SPI_FIFO = 0xff; // Dummy write to request read from slave
 
+    while(!(*SPI_CS & CS_DONE));
     *SPI_CS &= ~CS_TA;
-    return tmp;
+
+    register uint32_t upper = (*SPI_FIFO << 8);
+    register uint32_t lower = *SPI_FIFO;
+
+    return upper | lower;
 }
 
