@@ -62,6 +62,7 @@ launch:
     str r5, [r4, #0xbc]
 
     ;@ This portion of code is only run by core 0
+    sev ;@ Signal event to the other cores to ensures they are awake
     bl enable_svc_mode
     bl init_irq
     ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
@@ -123,8 +124,10 @@ UnusedHandler:
 ;@ b UnusedHandler
 subs pc, lr, #4
 
-;@.global IRQHandler
-;@IRQHandler:       b IRQHandler
+.global IRQHandler
+IRQHandler:
+;@ b IRQHandler
+subs pc, lr, #4
 
 .global FIQHandler
 FIQHandler:

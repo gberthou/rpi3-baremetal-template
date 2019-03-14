@@ -2,12 +2,15 @@
 #include "common.h"
 #include "gpio.h"
 
-#define BASE_SPI_FREQ_HZ 250000000
+#define BASE_SPI_FREQ_HZ 250000000u
 
+#define CS_TXD (1 << 18)
 #define CS_RXD (1 << 17)
 #define CS_DONE (1 << 16)
 #define CS_REN  (1 << 12)
 #define CS_TA   (1 << 7)
+#define CS_CLEAR_RX (1<<5)
+#define CS_CLEAR_TX (1<<4)
 
 // CE0  = gpio8 -> alt0
 // MOSI = gpio10 -> alt0
@@ -31,6 +34,8 @@ ALT4
 #define SPI_FIFO ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204004))
 #define SPI_CLK  ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204008))
 
+static uint32_t cs_config = 0;
+
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode)
 {
     // SPI cannot operate for frequencies higher than BASE/2
@@ -47,9 +52,32 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
     // requirements
     *SPI_CLK = BASE_SPI_FREQ_HZ / desiredFreq;
 
-    *SPI_CS = (csmode << 6) | (datamode << 2);
+    cs_config = (csmode << 6) | (datamode << 2);
+    *SPI_CS = cs_config;
 
     return 0;
+}
+
+void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
+{
+    const uint8_t *_rbuffer = rbuffer;
+    uint8_t *_wbuffer = wbuffer;
+
+    *SPI_CS = cs_config | CS_TA | CS_CLEAR_RX | CS_CLEAR_TX;
+    for(size_t i = size; i--;)
+    {
+        while(!(*SPI_CS & CS_TXD));
+        *SPI_FIFO = *_rbuffer++;
+    }
+
+    while(size--)
+    {
+        while(!(*SPI_CS & CS_RXD));
+        *_wbuffer++ = *SPI_FIFO;
+    }
+
+    while(!(*SPI_CS & CS_DONE));
+    *SPI_CS = cs_config;
 }
 
 uint32_t spi_read16_bidirectional(void)

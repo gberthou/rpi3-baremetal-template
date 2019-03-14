@@ -22,6 +22,8 @@ enum spi_data_mode_e
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode);
 
+void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size);
+
 /* spi_read16_bidirectional
  * Reads 2 bytes from spi slabe.
  * SCLK is interrupted after each transferred byte, by software operation
