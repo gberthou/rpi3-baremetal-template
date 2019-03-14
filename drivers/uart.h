@@ -8,5 +8,8 @@ void uart_putc(uint8_t c);
 void uart_print(const char *str);
 void uart_print_hex(uint64_t x);
 
+// [!] size must be multiple of 4
+void uart_print_raw32(const void *data, size_t size);
+
 #endif
 
