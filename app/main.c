@@ -35,9 +35,13 @@ void main0(void)
     {
         wait_us(500000);
 
+        /*
         uart_print("Ticks = ");
         uart_print_hex(ticks);
-        uart_print("\r\n");
+        */
+
+        uart_print("sensed: ");
+        uart_print_hex(ads8661_sense());
     }
 }
 

@@ -10,25 +10,14 @@ union command_u
 
 uint32_t ads8661_init(void)
 {
-    // For some reason, cannot make it work for SPICLK > 3.9MHz
-    // Anyway, when SPICLK > 2MHz, clock signal is substantially altered
-    //
-    uint32_t status = spi_init(/*1302000u*/ 900000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
+    // SCLK = 20MHz, shorten the cables if you want higher clock values
+    uint32_t status = spi_init(2000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
     if(status)
         return status;
 
     ads8661_write(0x0c, 0x0200);
-    ads8661_write(0x10, 0x0107);
+    ads8661_write(0x10, 0x0100); // release=0x100. debug=0x107 (ads8661_sense() should return 0x333)
     ads8661_write(0x14, 0x000b);
-
-    uart_print("\r\n####\r\n");
-
-    uint32_t dump[9];
-    ads8661_dump(dump);
-    for(size_t i = 0; i < 9; ++i)
-        uart_print_hex(dump[i]);
-
-    uart_print("\r\n####\r\n");
 
     return status;
 }
@@ -58,8 +47,17 @@ uint16_t ads8661_read(uint16_t address)
     return ((uint16_t)ret.buf[0] << 8) | ret.buf[1];
 }
 
-// buf must contain at least 9 uint32_t elements.
-// sizeof(buf) >= 36
+uint32_t ads8661_sense(void)
+{
+    union command_u payload_nop = {.u32 = 0x00000000};
+    union command_u ret;
+
+    spi_rw_buffer(&payload_nop.buf, &ret.buf, sizeof(payload_nop));
+    spi_rw_buffer(&payload_nop.buf, &ret.buf, sizeof(payload_nop));
+
+    return ret.u32;
+}
+
 void ads8661_dump(uint32_t *buf)
 {
     for(size_t i = 0x00; i <= 0x14; i += 4)
