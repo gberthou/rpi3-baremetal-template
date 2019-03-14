@@ -58,6 +58,16 @@ uint32_t ads8661_sense(void)
     return ret.u32;
 }
 
+void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
+{
+    union command_u payload_nop = {.u32 = 0x00000000};
+    union command_u tmp;
+
+    spi_rw_buffer(&payload_nop.buf, &tmp.buf, sizeof(payload_nop));
+    while(maxlen--)
+        spi_rw_buffer(&payload_nop.buf, buf++, sizeof(payload_nop));
+}
+
 void ads8661_dump(uint32_t *buf)
 {
     for(size_t i = 0x00; i <= 0x14; i += 4)

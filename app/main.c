@@ -10,7 +10,10 @@
 #include "../drivers/spi.h"
 #include "../drivers/ads8661.h"
 
+#define BUFSIZE (1<<8)
+
 static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
+static uint32_t measures[BUFSIZE];
 
 static void wait_us(uint32_t us)
 {
@@ -33,15 +36,12 @@ void main0(void)
 
     for(;;)
     {
-        wait_us(500000);
+        ads8661_stream_blocking(measures, sizeof(measures)/sizeof(*measures));
 
-        /*
-        uart_print("Ticks = ");
-        uart_print_hex(ticks);
-        */
+        for(size_t i = 0; i < BUFSIZE; ++i)
+            uart_print_hex(measures[i]);
 
-        uart_print("sensed: ");
-        uart_print_hex(ads8661_sense());
+        wait_us(1000000);
     }
 }
 
