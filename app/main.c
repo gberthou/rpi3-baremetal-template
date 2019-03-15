@@ -4,6 +4,8 @@
 #include "../drivers/systimer.h"
 #include "../drivers/ads8661.h"
 
+#include "calibration.h"
+
 #define BUFSIZE (1<<12)
 #define POOLSIZE 32
 
@@ -64,6 +66,8 @@ void main0(void)
     }
 
     wait_us(50000);
+
+    calibrate();
 
     for(;;)
     {

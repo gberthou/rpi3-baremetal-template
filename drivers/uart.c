@@ -48,6 +48,12 @@ void uart_putc(uint8_t c)
     *DR = c;
 }
 
+uint8_t uart_getc(void)
+{
+    while(*FR & 0x02);
+    return *DR;
+}
+
 void uart_print(const char *str)
 {
     char c;

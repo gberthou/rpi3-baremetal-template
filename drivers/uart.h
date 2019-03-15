@@ -5,6 +5,7 @@
 
 void uart_init_1415(void);
 void uart_putc(uint8_t c);
+uint8_t uart_getc(void);
 void uart_print(const char *str);
 void uart_print_hex(uint64_t x);
 
