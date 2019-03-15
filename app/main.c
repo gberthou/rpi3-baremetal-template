@@ -5,51 +5,7 @@
 #include "../drivers/ads8661.h"
 
 #include "calibration.h"
-
-#define BUFSIZE (1<<12)
-#define POOLSIZE 32
-
-struct measurement_t
-{
-    // Truncate ticks to 32bit => overflows at 4295s
-    uint32_t tick_before;
-    uint32_t tick_after;
-    uint32_t data[BUFSIZE];
-};
-
-struct display_t
-{
-    uint32_t tick_before;
-    uint32_t tick_after;
-    uint16_t data[BUFSIZE];
-};
-
-static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
-static volatile size_t measurement_index = 0;
-static volatile size_t display_index = 0;
-static struct measurement_t measurements[POOLSIZE];
-
-static void wait_us(uint32_t us)
-{
-   uint64_t tend = systimer_getticks() + us;
-   while(systimer_getticks() < tend);
-}
-
-void acquire(struct measurement_t *measurement, size_t length)
-{
-    measurement->tick_before = systimer_getticks();
-    ads8661_stream_blocking(measurement->data, length);
-    measurement->tick_after = systimer_getticks();
-}
-
-void display(const struct measurement_t *measurement, size_t length)
-{
-    struct display_t d = {.tick_before = measurement->tick_before, .tick_after = measurement->tick_after};
-    for(size_t i = 0; i < length; ++i)
-        d.data[i] = measurement->data[i]; // Keep only the last 16bits, which correspond to the most-significant bits since endianness is reversed
-
-    uart_print_raw32(&d, length*sizeof(uint16_t)+2*sizeof(uint32_t));
-}
+#include "streamer.h"
 
 void main0(void)
 {
@@ -57,29 +13,29 @@ void main0(void)
 
     uart_init_1415();
 
-    uart_print("Hello world!\r\n");
+    uart_print("#### Powerprobe ####\r\n");
 
     if(ads8661_init() != 0)
     {
-        uart_print("Failed\r\n");
+        uart_print("ADS8661 init failed\r\n");
         for(;;);
     }
 
-    wait_us(50000);
-
-    calibrate();
-
     for(;;)
     {
-        for(size_t i = 0; i < POOLSIZE; ++i)
+        uart_print("c: Calibrate\r\n"
+                   "s: Stream\r\n");
+
+        uint8_t c = uart_getc();
+        while(c != 'c' && c != 's')
+            c = uart_getc();
+
+        if(c == 'c')
+            calibrate();
+        else if(c == 's')
         {
-            acquire(measurements + measurement_index, BUFSIZE);
-            ++measurement_index;
+            streamer_acquisition_thread();
         }
-        
-        // Synchronize with display thread
-        while(display_index < POOLSIZE);
-        measurement_index = 0;
     }
 }
 
@@ -87,25 +43,18 @@ void main1(void)
 {
     /* This code is going to be run on core 1 */
 
+    streamer_display_thread();
+
     for(;;)
     {
-        for(size_t i = 0; i < POOLSIZE; ++i)
-        {
-            while(measurement_index <= display_index);
-
-            display(measurements + display_index, BUFSIZE);
-            ++display_index;
-        }
-        
-        // Synchronize with acquisition thread
-        while(measurement_index >= POOLSIZE);
-        display_index = 0;
     }
 }
 
 void main2(void)
 {
     /* This code is going to be run on core 2 */
+
+    streamer_timer_thread();
 
     for(;;)
     {
@@ -118,6 +67,5 @@ void main3(void)
 
     for(;;)
     {
-        ticks = systimer_getticks();
     }
 }
