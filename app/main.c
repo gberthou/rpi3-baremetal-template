@@ -6,6 +6,7 @@
 
 #include "calibration.h"
 #include "streamer.h"
+#include "plot.h"
 
 void main0(void)
 {
@@ -24,18 +25,19 @@ void main0(void)
     for(;;)
     {
         uart_print("c: Calibrate\r\n"
-                   "s: Stream\r\n");
+                   "s: Stream\r\n"
+                   "p: Plot\r\n");
 
         uint8_t c = uart_getc();
-        while(c != 'c' && c != 's')
+        while(c != 'c' && c != 's' && c != 'p')
             c = uart_getc();
 
         if(c == 'c')
             calibrate();
         else if(c == 's')
-        {
             streamer_acquisition_thread();
-        }
+        else if(c == 'p')
+            plot();
     }
 }
 
