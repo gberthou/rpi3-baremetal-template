@@ -36,13 +36,28 @@ static void acquire(struct measurement_t *measurement, size_t length)
     measurement->tick_after = systimer_getticks();
 }
 
+static void print_raw32_custom64(const void *data, size_t size)
+{
+    const uint32_t *_data = data;
+    size >>= 2;
+
+    while(size--)
+    {
+        uint32_t value = *_data++;
+        for(size_t i = 6, j = 0; i-- > 0; j += 6)
+            uart_putc(32 + ((value >> j) & 0x3f));
+    }
+    uart_putc('\r');
+    uart_putc('\n');
+}
+
 static void display(const struct measurement_t *measurement, size_t length)
 {
     struct display_t d = {.tick_before = measurement->tick_before, .tick_after = measurement->tick_after};
     for(size_t i = 0; i < length; ++i)
         d.data[i] = measurement->data[i]; // Keep only the last 16bits, which correspond to the most-significant bits since endianness is reversed
 
-    uart_print_raw32(&d, length*sizeof(uint16_t)+2*sizeof(uint32_t));
+    print_raw32_custom64(&d, length*sizeof(uint16_t)+2*sizeof(uint32_t));
 }
 
 void streamer_acquisition_thread(void)
