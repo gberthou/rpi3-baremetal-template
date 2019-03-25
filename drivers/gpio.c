@@ -4,6 +4,7 @@
 #define GPFSEL0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200000))
 #define GPSET0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020001C))
 #define GPCLR0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200028))
+#define GPLEV0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200034))
 #define GPPUD     ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200094))
 #define GPPUDCLK0 ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200098))
 #define GPAREN0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020007C))
@@ -49,6 +50,14 @@ void gpio_out(unsigned int gpio, unsigned int value)
         GPSET0[offset] = mask;
     else
         GPCLR0[offset] = mask;
+}
+
+unsigned int gpio_in(unsigned int gpio)
+{
+    size_t offset = (gpio > 31 ? 1 : 0);
+    size_t mask   = 1u << (gpio % 32);
+
+    return (GPLEV0[offset] & mask) != 0;
 }
 
 void gpio_set_async_edge_detect(unsigned int gpio, enum gpio_edge_e edge, unsigned int enable)

@@ -29,6 +29,7 @@ enum gpio_edge_e
 void gpio_select_function(unsigned int gpio, enum gpio_function_e function);
 void gpio_set_resistor(unsigned int gpio, enum gpio_resistor_e resistor);
 void gpio_out(unsigned int gpio, unsigned int value);
+unsigned int gpio_in(unsigned int gpio);
 void gpio_set_async_edge_detect(unsigned int gpio, enum gpio_edge_e edge, unsigned int enable);
 void gpio_ack_interrupt(unsigned int gpio);
 

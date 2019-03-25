@@ -45,7 +45,7 @@ void main1(void)
 {
     /* This code is going to be run on core 1 */
 
-    streamer_display_thread();
+    streamer_gpio_thread();
 
     for(;;)
     {
@@ -55,8 +55,6 @@ void main1(void)
 void main2(void)
 {
     /* This code is going to be run on core 2 */
-
-    streamer_timer_thread();
 
     for(;;)
     {

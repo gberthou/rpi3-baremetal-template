@@ -1,19 +1,25 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "../drivers/uart.h"
+#include "../drivers/gpio.h"
 #include "../drivers/systimer.h"
 #include "../drivers/ads8661.h"
 
 #include "calibration.h"
 
-#define BUFSIZE (1<<12)
-#define POOLSIZE 32
+#define BUFSIZE (1<<13)
+
+#define GPIO_DUT 26 // Pin used by the device under test to notify the monitor
+#define GPIO_MON 16 // Pin used by the monitor (RPI) to notidy the device under test
 
 struct measurement_t
 {
     // Truncate ticks to 32bit => overflows at 4295s
     uint32_t tick_before;
     uint32_t tick_after;
+    uint32_t tick_start;
+    uint32_t tick_stop;
     uint32_t data[BUFSIZE];
 };
 
@@ -21,13 +27,14 @@ struct display_t
 {
     uint32_t tick_before;
     uint32_t tick_after;
+    uint32_t tick_start;
+    uint32_t tick_stop;
     uint16_t data[BUFSIZE];
 };
 
-static volatile uint64_t ticks = 0;
-static volatile size_t measurement_index = 0;
-static volatile size_t display_index = 0;
-static struct measurement_t measurements[POOLSIZE];
+static volatile unsigned int started = false;
+static volatile bool must_acquire = false;
+static struct measurement_t measurement;
 
 static void acquire(struct measurement_t *measurement, size_t length)
 {
@@ -53,7 +60,12 @@ static void print_raw32_custom64(const void *data, size_t size)
 
 static void display(const struct measurement_t *measurement, size_t length)
 {
-    struct display_t d = {.tick_before = measurement->tick_before, .tick_after = measurement->tick_after};
+    struct display_t d = {
+        .tick_before = measurement->tick_before,
+        .tick_after  = measurement->tick_after,
+        .tick_start  = measurement->tick_start,
+        .tick_stop   = measurement->tick_stop
+    };
     for(size_t i = 0; i < length; ++i)
         d.data[i] = measurement->data[i]; // Keep only the last 16bits, which correspond to the most-significant bits since endianness is reversed
 
@@ -62,42 +74,57 @@ static void display(const struct measurement_t *measurement, size_t length)
 
 void streamer_acquisition_thread(void)
 {
+    started = true;
     for(;;)
     {
-        for(size_t i = 0; i < POOLSIZE; ++i)
-        {
-            acquire(measurements + measurement_index, BUFSIZE);
-            ++measurement_index;
-        }
-        
-        // Synchronize with display thread
-        while(display_index < POOLSIZE);
-        measurement_index = 0;
+        while(!must_acquire);
+
+        acquire(&measurement, BUFSIZE);
+
+        must_acquire = false; // Release
     }
 }
 
-void streamer_display_thread(void)
+void streamer_gpio_thread(void)
 {
+    while(!started);
+
+    gpio_select_function(GPIO_DUT, GPIO_INPUT);
+    gpio_select_function(GPIO_MON, GPIO_OUTPUT);
+    gpio_set_resistor(GPIO_DUT, GPIO_RESISTOR_PULLUP);
+    gpio_out(GPIO_MON, 0);
+
     for(;;)
     {
-        for(size_t i = 0; i < POOLSIZE; ++i)
+        for(size_t i = 0; i < 2; ++i)
         {
-            while(measurement_index <= display_index);
+            uint64_t tstop = -1ul;
 
-            display(measurements + display_index, BUFSIZE);
-            ++display_index;
+            while(!gpio_in(GPIO_DUT)); // Wait until DUT is ready
+            if(i == 0) // Start
+                uart_print("Start\n");
+            else // Stop
+            {
+                tstop = systimer_getticks();
+                uart_print("Stop\n");
+            }
+
+            gpio_out(GPIO_MON, 1); // Prepare DUT
+            while(gpio_in(GPIO_DUT)); // Wait until DUT is ready
+            
+            if(i == 0) // Start measurement
+            {
+                must_acquire = true; // Notify acquisition thread
+                measurement.tick_start = systimer_getticks();
+            }
+            else // Stop measurement
+            {
+                while(must_acquire); // Wait until acquisition is done
+                measurement.tick_stop = tstop;
+                display(&measurement, BUFSIZE);
+            }
+            gpio_out(GPIO_MON, 0); // Notify DUT to resume
         }
-        
-        // Synchronize with acquisition thread
-        while(measurement_index >= POOLSIZE);
-        display_index = 0;
     }
 }
 
-void streamer_timer_thread(void)
-{
-    for(;;)
-    {
-        ticks = systimer_getticks();
-    }
-}
