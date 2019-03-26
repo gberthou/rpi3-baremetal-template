@@ -1,7 +1,7 @@
 #ifndef DRIVERS_FRAMEBUFFER_H
 #define DRIVERS_FRAMEBUFFER_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 // Format: ARGB?
 

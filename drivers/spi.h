@@ -1,7 +1,8 @@
 #ifndef DRIVERS_SPI_H
 #define DRIVERS_SPI_H
 
-#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
 
 /* This minimalistic driver only supports one SPI slave, to be wired to the spi_[ce|sclk|miso|mosi]_0 pins.
  */

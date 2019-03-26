@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stddef.h>
+
 #include "common.h"
 #include "gpio.h"
 

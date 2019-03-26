@@ -1,7 +1,8 @@
 #ifndef DRIVERS_UART_H
 #define DRIVERS_UART_H
 
-#include "common.h"
+#include <stdint.h>
+#include <stddef.h>
 
 void uart_init_1415(void);
 void uart_putc(uint8_t c);

@@ -11,7 +11,7 @@ union command_u
 uint32_t ads8661_init(void)
 {
     // SCLK = 20MHz, shorten the cables if you want higher clock values
-    uint32_t status = spi_init(2000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
+    uint32_t status = spi_init(20000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
     if(status)
         return status;
 
