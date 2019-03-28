@@ -12,7 +12,7 @@ union command_u
 uint32_t ads8661_init(void)
 {
     // SCLK = 20MHz, shorten the cables if you want higher clock values
-    uint32_t status = spi_init(2000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
+    uint32_t status = spi_init(20000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
     if(status)
         return status;
 
@@ -70,10 +70,21 @@ uint32_t ads8661_sense(void)
 void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
 {
     union command_u payload_nop = {.u32 = 0x00000000};
+#ifndef SPI_DMA
     union command_u tmp;
     spi_rw_buffer(&payload_nop.buf, &tmp.buf, sizeof(payload_nop));
     while(maxlen--)
         spi_rw_buffer(&payload_nop.buf, buf++, sizeof(payload_nop));
+#else
+    uint32_t dma_payload[] = {
+        0, // Ctrl, will be set by spi_rw_dma32
+        payload_nop.u32
+    };
+    uint32_t tmp;
+    spi_rw_dma32(dma_payload, &tmp, sizeof(dma_payload));
+    while(maxlen--)
+        spi_rw_dma32(dma_payload, buf++, sizeof(dma_payload));
+#endif
 }
 
 void ads8661_dump(uint32_t *buf)
