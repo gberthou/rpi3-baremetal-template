@@ -81,7 +81,7 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
     *SPI_CS = cs_config_nodma;
 }
 
-void spi_rw_dma32(uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
+void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
 {
     static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
         .transfer_info = (1 << 8) // SRC_INC
@@ -105,19 +105,27 @@ void spi_rw_dma32(uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
         .next = 0
     };
 
-    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) rbuffer);
-    block_ram2spi.transfer_len = size_bytes;
+    size_t size_words = (size_bytes >> 2);
 
-    block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) wbuffer);
-    block_spi2ram.transfer_len = size_bytes - sizeof(uint32_t);
+    uint32_t dma_payload[] = {
+        (sizeof(uint32_t) << 16) | (cs_config_nodma & 0xff) | CS_TA,
+        0
+    };
 
-    rbuffer[0] = ((size_bytes - sizeof(uint32_t)) << 16) | (cs_config_nodma & 0xff) | CS_TA;
+    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) dma_payload);
+    block_ram2spi.transfer_len = sizeof(dma_payload);
+    block_spi2ram.transfer_len = sizeof(uint32_t);
 
     *SPI_CS = cs_config_nodma | CS_DMAEN | CS_ADCS | CS_CLEAR_RX | CS_CLEAR_TX;
-    dma_run_async(0, &block_ram2spi);
-    dma_run_async(1, &block_spi2ram);
-    dma_wait_transfer_done(1);
-    __asm__ __volatile__("dsb");
+    while(size_words--)
+    {
+        dma_payload[1] = *rbuffer++;
+        block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) (wbuffer++));
+
+        dma_run_async(0, &block_ram2spi);
+        dma_run_async(1, &block_spi2ram);
+        dma_wait_transfer_done(1);
+    }
     *SPI_CS = cs_config_nodma;
 }
 

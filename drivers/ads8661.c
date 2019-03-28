@@ -28,16 +28,11 @@ void ads8661_write(uint16_t address, uint16_t value)
     address &= 0x01fc;
 
     union command_u payload = {.buf = {0xd0 | (address >> 8), address, value >> 8, value}};
+    uint32_t ret;
 #ifndef SPI_DMA
-    union command_u ret;
     spi_rw_buffer(&payload.buf, &ret.buf, sizeof(payload));
 #else
-    uint32_t dma_payload[] = {
-        0, // Ctrl, will be set by spi_rw_dma32
-        payload.u32
-    };
-    uint32_t ret;
-    spi_rw_dma32(dma_payload, &ret, sizeof(dma_payload));
+    spi_rw_dma32(&payload.u32, &ret, sizeof(payload));
 #endif
 }
 
@@ -70,20 +65,14 @@ uint32_t ads8661_sense(void)
 void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
 {
     union command_u payload_nop = {.u32 = 0x00000000};
+    uint32_t tmp;
 #ifndef SPI_DMA
-    union command_u tmp;
-    spi_rw_buffer(&payload_nop.buf, &tmp.buf, sizeof(payload_nop));
+    spi_rw_buffer(&payload_nop.buf, &tmp, sizeof(payload_nop));
     while(maxlen--)
         spi_rw_buffer(&payload_nop.buf, buf++, sizeof(payload_nop));
 #else
-    uint32_t dma_payload[] = {
-        0, // Ctrl, will be set by spi_rw_dma32
-        payload_nop.u32
-    };
-    uint32_t tmp;
-    spi_rw_dma32(dma_payload, &tmp, sizeof(dma_payload));
-    while(maxlen--)
-        spi_rw_dma32(dma_payload, buf++, sizeof(dma_payload));
+    spi_rw_dma32(&payload_nop.u32, &tmp, sizeof(payload_nop));
+    spi_rw_dma32(&payload_nop.u32, buf, maxlen*sizeof(uint32_t));
 #endif
 }
 

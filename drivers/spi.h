@@ -25,10 +25,7 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
 
 void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size);
 
-// [!] rbuffer must have one more element than wbuffer, at index 0
-// rbuffer[0] will be modified. All other words of rbuffer will be left
-// untouched
-void spi_rw_dma32(uint32_t *rbuffer, uint32_t *wbuffer, size_t length);
+void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes);
 
 /* spi_read16_bidirectional
  * Reads 2 bytes from spi slabe.

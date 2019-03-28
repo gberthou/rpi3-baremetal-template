@@ -45,7 +45,6 @@ void dma_run_async(size_t channel, const struct dma_block_t *block)
     volatile struct dma_chan_t *ptr = DMAX(channel);
     ptr->cs = 0x80000000; // Reset dma channel
     ptr->block_addr = VIRT_TO_PHYS((uint32_t) block);
-    __asm__ __volatile__("dsb");
     ptr->cs = 0x00000001; // Activate DMA
 }
 
