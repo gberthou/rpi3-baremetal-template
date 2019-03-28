@@ -83,25 +83,33 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
 
 void spi_rw_dma32(uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
 {
-    static struct dma_block_t __attribute__((aligned(256))) block_ram2spi;
-    block_ram2spi.transfer_info = (1 << 8) // SRC_INC
-                                ;
-    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) rbuffer);
-    block_ram2spi.dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO);
-    block_ram2spi.transfer_len = size_bytes;
-    block_ram2spi.stride = 0;
-    block_ram2spi.next = 0;
+    static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
+        .transfer_info = (1 << 8) // SRC_INC
+                       ,
+        .src_addr = 0,
+        .dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+        .transfer_len = 0,
+        .stride = 0,
+        .next = 0
+    };
 
-    static struct dma_block_t __attribute__((aligned(256))) block_spi2ram;
-    block_spi2ram.transfer_info = (SPI_RX << 16) // PERMAP
-                                | (1 << 10) // SRC_DREQ
-                                | (1 << 4) // DST_INC
-                                ;
-    block_spi2ram.src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO);
+    static struct dma_block_t __attribute__((aligned(256))) block_spi2ram = {
+        .transfer_info = (SPI_RX << 16) // PERMAP
+                       | (1 << 10) // SRC_DREQ
+                       | (1 << 4) // DST_INC
+                       ,
+        .src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+        .dst_addr = 0,
+        .transfer_len = 0,
+        .stride = 0,
+        .next = 0
+    };
+
+    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) rbuffer);
+    block_ram2spi.transfer_len = size_bytes;
+
     block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) wbuffer);
     block_spi2ram.transfer_len = size_bytes - sizeof(uint32_t);
-    block_spi2ram.stride = 0;
-    block_spi2ram.next = 0;
 
     rbuffer[0] = ((size_bytes - sizeof(uint32_t)) << 16) | (cs_config_nodma & 0xff) | CS_TA;
 
