@@ -64,6 +64,13 @@ void uart_print(const char *str)
         uart_putc(c);
 }
 
+void uart_error(const char *str)
+{
+    uart_print(str);
+    for(;;)
+        __asm__ __volatile__("nop");
+}
+
 static void u64_to_hex(char *dst, uint64_t x)
 {
     for(unsigned int i = 0; i < 16; ++i)

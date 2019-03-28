@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "../drivers/dma.h"
 #include "../drivers/uart.h"
 #include "../drivers/systimer.h"
 #include "../drivers/ads8661.h"

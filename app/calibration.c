@@ -23,7 +23,7 @@ static uint32_t mean(const uint32_t *buf)
 
 void calibrate(void)
 {
-    uint32_t buf[BUFSIZE];
+    static uint32_t buf[BUFSIZE];
 
     for(;;)
     {

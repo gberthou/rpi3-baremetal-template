@@ -1,6 +1,7 @@
 #include "ads8661.h"
 #include "spi.h"
-#include "uart.h"
+
+#define SPI_DMA
 
 union command_u
 {
@@ -11,7 +12,7 @@ union command_u
 uint32_t ads8661_init(void)
 {
     // SCLK = 20MHz, shorten the cables if you want higher clock values
-    uint32_t status = spi_init(20000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
+    uint32_t status = spi_init(2000000u, SPI_CS_ACTIVE_LOW, SPI_CPOL0_CPHA0);
     if(status)
         return status;
 
@@ -27,18 +28,26 @@ void ads8661_write(uint16_t address, uint16_t value)
     address &= 0x01fc;
 
     union command_u payload = {.buf = {0xd0 | (address >> 8), address, value >> 8, value}};
+#ifndef SPI_DMA
     union command_u ret;
-
     spi_rw_buffer(&payload.buf, &ret.buf, sizeof(payload));
+#else
+    uint32_t dma_payload[] = {
+        0, // Ctrl, will be set by spi_rw_dma32
+        payload.u32
+    };
+    uint32_t ret;
+    spi_rw_dma32(dma_payload, &ret, sizeof(dma_payload));
+#endif
 }
 
 uint16_t ads8661_read(uint16_t address)
 {
     address &= 0x01fc;
 
+    union command_u ret;
     union command_u payload = {.buf = {0xc8 | (address >> 8), address, 0x00, 0x00}};
     union command_u payload_nop = {.u32 = 0x00000000};
-    union command_u ret;
 
     spi_rw_buffer(&payload.buf, &ret.buf, sizeof(payload));
     spi_rw_buffer(&payload_nop.buf, &ret.buf, sizeof(payload_nop));
@@ -62,7 +71,6 @@ void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
 {
     union command_u payload_nop = {.u32 = 0x00000000};
     union command_u tmp;
-
     spi_rw_buffer(&payload_nop.buf, &tmp.buf, sizeof(payload_nop));
     while(maxlen--)
         spi_rw_buffer(&payload_nop.buf, buf++, sizeof(payload_nop));

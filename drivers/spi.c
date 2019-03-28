@@ -1,21 +1,19 @@
 #include "spi.h"
 #include "common.h"
 #include "gpio.h"
+#include "dma.h"
 
 #define BASE_SPI_FREQ_HZ 250000000u
 
-#define CS_TXD (1 << 18)
-#define CS_RXD (1 << 17)
-#define CS_DONE (1 << 16)
-#define CS_REN  (1 << 12)
-#define CS_TA   (1 << 7)
+#define CS_TXD      (1 << 18)
+#define CS_RXD      (1 << 17)
+#define CS_DONE     (1 << 16)
+#define CS_REN      (1 << 12)
+#define CS_ADCS     (1 << 11)
+#define CS_DMAEN    (1 << 8)
+#define CS_TA       (1 << 7)
 #define CS_CLEAR_RX (1<<5)
 #define CS_CLEAR_TX (1<<4)
-
-// CE0  = gpio8 -> alt0
-// MOSI = gpio10 -> alt0
-// MISO = gpio9 -> alt0 
-// SCLK = gpio11 -> alt0
 
 #define GPIO_CE0   8
 #define GPIO_MOSI0 10
@@ -34,7 +32,7 @@ ALT4
 #define SPI_FIFO ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204004))
 #define SPI_CLK  ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00204008))
 
-static uint32_t cs_config = 0;
+static uint32_t cs_config_nodma = 0;
 
 uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data_mode_e datamode)
 {
@@ -52,8 +50,11 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
     // requirements
     *SPI_CLK = BASE_SPI_FREQ_HZ / desiredFreq;
 
-    cs_config = (csmode << 6) | (datamode << 2);
-    *SPI_CS = cs_config;
+    cs_config_nodma = (csmode << 6) | (datamode << 2);
+    *SPI_CS = cs_config_nodma;
+
+    dma_enable(0, 1);
+    dma_enable(1, 1);
 
     return 0;
 }
@@ -63,7 +64,7 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
     const uint8_t *_rbuffer = rbuffer;
     uint8_t *_wbuffer = wbuffer;
 
-    *SPI_CS = cs_config | CS_TA | CS_CLEAR_RX | CS_CLEAR_TX;
+    *SPI_CS = cs_config_nodma | CS_TA | CS_CLEAR_RX | CS_CLEAR_TX;
     for(size_t i = size; i--;)
     {
         while(!(*SPI_CS & CS_TXD));
@@ -77,7 +78,39 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
     }
 
     while(!(*SPI_CS & CS_DONE));
-    *SPI_CS = cs_config;
+    *SPI_CS = cs_config_nodma;
+}
+
+void spi_rw_dma32(uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
+{
+    static struct dma_block_t __attribute__((aligned(256))) block_ram2spi;
+    block_ram2spi.transfer_info = (1 << 8) // SRC_INC
+                                ;
+    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) rbuffer);
+    block_ram2spi.dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO);
+    block_ram2spi.transfer_len = size_bytes;
+    block_ram2spi.stride = 0;
+    block_ram2spi.next = 0;
+
+    static struct dma_block_t __attribute__((aligned(256))) block_spi2ram;
+    block_spi2ram.transfer_info = (SPI_RX << 16) // PERMAP
+                                | (1 << 10) // SRC_DREQ
+                                | (1 << 4) // DST_INC
+                                ;
+    block_spi2ram.src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO);
+    block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) wbuffer);
+    block_spi2ram.transfer_len = size_bytes - sizeof(uint32_t);
+    block_spi2ram.stride = 0;
+    block_spi2ram.next = 0;
+
+    rbuffer[0] = ((size_bytes - sizeof(uint32_t)) << 16) | (cs_config_nodma & 0xff) | CS_TA;
+
+    *SPI_CS = cs_config_nodma | CS_DMAEN | CS_ADCS | CS_CLEAR_RX | CS_CLEAR_TX;
+    dma_run_async(0, &block_ram2spi);
+    dma_run_async(1, &block_spi2ram);
+    dma_wait_transfer_done(1);
+    __asm__ __volatile__("dsb");
+    *SPI_CS = cs_config_nodma;
 }
 
 uint32_t spi_read16_bidirectional(void)
