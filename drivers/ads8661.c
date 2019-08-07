@@ -16,8 +16,8 @@ uint32_t ads8661_init(void)
     if(status)
         return status;
 
-    ads8661_write(0x0c, 0x0200);
-    ads8661_write(0x10, 0x0100); // release=0x100. debug=0x107 (ads8661_sense() should return 0x333)
+    //ads8661_write(0x0c, 0x0200);
+    //ads8661_write(0x10, 0x0100); // release=0x100. debug=0x107 (ads8661_sense() should return 0x333)
     ads8661_write(0x14, 0x000b);
 
     return status;
