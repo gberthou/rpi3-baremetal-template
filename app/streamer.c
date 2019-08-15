@@ -8,7 +8,7 @@
 
 #include "calibration.h"
 
-#define BUFSIZE (1<<16)
+#define BUFSIZE (1<<13)
 
 #define GPIO_DUT 26 // Pin used by the device under test to notify the monitor
 #define GPIO_MON 16 // Pin used by the monitor (RPI) to notidy the device under test
@@ -35,6 +35,7 @@ struct display_t
 static volatile unsigned int started = false;
 static volatile bool must_acquire = false;
 static struct measurement_t measurement;
+static bool summary = false;
 
 static void acquire(struct measurement_t *measurement, size_t length)
 {
@@ -77,8 +78,72 @@ static void display(const struct measurement_t *measurement, size_t length)
     print_raw32_custom64(&d, sizeof(d));
 }
 
-void streamer_acquisition_thread(void)
+static uint32_t reverse_endianness_and_extract(uint32_t x)
 {
+    return ((((x & 0xff) << 4) | ((x >> 12) & 0xf)) & 0x3ff);
+}
+
+static uint32_t reverse_endianness_and_sum(const uint32_t *data, size_t length)
+{
+    uint32_t sum = 0;
+    while(length--)
+    {
+        uint32_t old_sum = sum;
+        sum += reverse_endianness_and_extract(*data++);
+        if(old_sum > sum) // Overflow
+            uart_print("[Error] reverse_endianness_and_sum: overflow\r\n");
+    }
+    return sum;
+}
+
+// length >= 1
+static uint32_t max_adc(const uint32_t *data, size_t length)
+{
+    uint32_t max = reverse_endianness_and_extract(*data++);
+    --length;
+    while(length--)
+    {
+        uint32_t tmp = reverse_endianness_and_extract(*data++);
+        if(tmp > max)
+            max = tmp;
+    }
+    return max;
+}
+
+static void display_summary(const struct measurement_t *measurement)
+{
+    size_t total_dt = measurement->tick_after - measurement->tick_before;
+    size_t duration = measurement->tick_stop - measurement->tick_start;
+
+
+    // For now, offset is always 0
+    //size_t offset = (measurement->tick_start - measurement->tick_before) * BUSIZE / total_dt;
+    size_t offset = 0;
+    size_t length = duration * BUFSIZE / total_dt;
+
+    uint32_t sum = reverse_endianness_and_sum(measurement->data + offset, length);
+    uint32_t m_adc = max_adc(measurement->data + offset, length);
+
+    uart_print("sum_adc    : ");
+    uart_print_hex(sum);
+    uart_print("\r\n");
+
+    uart_print("total_dt_us: ");
+    uart_print_hex(total_dt);
+    uart_print("\r\n");
+
+    uart_print("duration_us: ");
+    uart_print_hex(duration);
+    uart_print("\r\n");
+
+    uart_print("max_adc    : ");
+    uart_print_hex(m_adc);
+    uart_print("\r\n\r\n");
+}
+
+void streamer_acquisition_thread(bool s)
+{
+    summary = s;
     started = true;
     for(;;)
     {
@@ -107,11 +172,15 @@ void streamer_gpio_thread(void)
 
             while(!gpio_in(GPIO_DUT)); // Wait until DUT is ready
             if(i == 0) // Start
-                uart_print("Start\n");
+            {
+                if(!summary)
+                    uart_print("Start\r\n");
+            }
             else // Stop
             {
                 tstop = systimer_getticks();
-                uart_print("Stop\n");
+                if(!summary)
+                    uart_print("Stop\r\n");
             }
 
             gpio_out(GPIO_MON, 1); // Prepare DUT
@@ -126,7 +195,10 @@ void streamer_gpio_thread(void)
             {
                 while(must_acquire); // Wait until acquisition is done
                 measurement.tick_stop = tstop;
-                display(&measurement, BUFSIZE);
+                if(summary)
+                    display_summary(&measurement);
+                else
+                    display(&measurement, BUFSIZE);
             }
             gpio_out(GPIO_MON, 0); // Notify DUT to resume
         }

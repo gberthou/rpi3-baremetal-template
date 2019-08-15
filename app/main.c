@@ -27,16 +27,19 @@ void main0(void)
     {
         uart_print("c: Calibrate\r\n"
                    "s: Stream\r\n"
+                   "u: Summary\r\n"
                    "p: Plot\r\n");
 
         uint8_t c = uart_getc();
-        while(c != 'c' && c != 's' && c != 'p')
+        while(c != 'c' && c != 's' && c != 'u' && c != 'p')
             c = uart_getc();
 
         if(c == 'c')
             calibrate();
         else if(c == 's')
-            streamer_acquisition_thread();
+            streamer_acquisition_thread(false);
+        else if(c == 'u')
+            streamer_acquisition_thread(true);
         else if(c == 'p')
             plot();
     }
