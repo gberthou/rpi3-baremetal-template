@@ -80,7 +80,7 @@ static void display(const struct measurement_t *measurement, size_t length)
 
 static uint32_t reverse_endianness_and_extract(uint32_t x)
 {
-    return ((((x & 0xff) << 4) | ((x >> 12) & 0xf)) & 0x3ff);
+    return ((((x & 0xff) << 4) | ((x >> 12) & 0xf)) & 0xfff);
 }
 
 static uint32_t reverse_endianness_and_sum(const uint32_t *data, size_t length)
@@ -123,6 +123,10 @@ static void display_summary(const struct measurement_t *measurement)
 
     uint32_t sum = reverse_endianness_and_sum(measurement->data + offset, length);
     uint32_t m_adc = max_adc(measurement->data + offset, length);
+
+    uart_print("buf_size   : ");
+    uart_print_hex(BUFSIZE);
+    uart_print("\r\n");
 
     uart_print("sum_adc    : ");
     uart_print_hex(sum);
