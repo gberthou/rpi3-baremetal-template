@@ -119,7 +119,7 @@ void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
     *SPI_CS = cs_config_nodma | CS_DMAEN | CS_ADCS | CS_CLEAR_RX | CS_CLEAR_TX;
     while(size_words--)
     {
-        dma_payload[1] = *rbuffer++;
+        dma_payload[1] = *rbuffer;
         block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) (wbuffer++));
 
         dma_run_async(0, &block_ram2spi);

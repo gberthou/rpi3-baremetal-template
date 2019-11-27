@@ -8,7 +8,7 @@
 
 #include "calibration.h"
 
-#define BUFSIZE (1<<13)
+#define BUFSIZE (1<<16)
 
 #define GPIO_DUT 26 // Pin used by the device under test to notify the monitor
 #define GPIO_MON 16 // Pin used by the monitor (RPI) to notidy the device under test
@@ -126,23 +126,19 @@ static void display_summary(const struct measurement_t *measurement)
 
     uart_print("buf_size   : ");
     uart_print_hex(BUFSIZE);
-    uart_print("\r\n");
 
     uart_print("sum_adc    : ");
     uart_print_hex(sum);
-    uart_print("\r\n");
 
     uart_print("total_dt_us: ");
     uart_print_hex(total_dt);
-    uart_print("\r\n");
 
     uart_print("duration_us: ");
     uart_print_hex(duration);
-    uart_print("\r\n");
 
     uart_print("max_adc    : ");
     uart_print_hex(m_adc);
-    uart_print("\r\n\r\n");
+    uart_print("\r\n");
 }
 
 void streamer_acquisition_thread(bool s)
