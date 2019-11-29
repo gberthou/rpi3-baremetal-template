@@ -26,6 +26,7 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
 void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size);
 
 void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes);
+void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes, volatile size_t *ready_bytes, volatile const unsigned int *stop);
 
 /* spi_read16_bidirectional
  * Reads 2 bytes from spi slabe.

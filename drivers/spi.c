@@ -81,30 +81,30 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
     *SPI_CS = cs_config_nodma;
 }
 
+static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
+    .transfer_info = (1 << 8) // SRC_INC
+                   ,
+    .src_addr = 0,
+    .dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+    .transfer_len = 0,
+    .stride = 0,
+    .next = 0
+};
+
+static struct dma_block_t __attribute__((aligned(256))) block_spi2ram = {
+    .transfer_info = (SPI_RX << 16) // PERMAP
+                   | (1 << 10) // SRC_DREQ
+                   | (1 << 4) // DST_INC
+                   ,
+    .src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+    .dst_addr = 0,
+    .transfer_len = 0,
+    .stride = 0,
+    .next = 0
+};
+
 void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
 {
-    static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
-        .transfer_info = (1 << 8) // SRC_INC
-                       ,
-        .src_addr = 0,
-        .dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
-        .transfer_len = 0,
-        .stride = 0,
-        .next = 0
-    };
-
-    static struct dma_block_t __attribute__((aligned(256))) block_spi2ram = {
-        .transfer_info = (SPI_RX << 16) // PERMAP
-                       | (1 << 10) // SRC_DREQ
-                       | (1 << 4) // DST_INC
-                       ,
-        .src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
-        .dst_addr = 0,
-        .transfer_len = 0,
-        .stride = 0,
-        .next = 0
-    };
-
     size_t size_words = (size_bytes >> 2);
 
     uint32_t dma_payload[] = {
@@ -125,6 +125,36 @@ void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
         dma_run_async(0, &block_ram2spi);
         dma_run_async(1, &block_spi2ram);
         dma_wait_transfer_done(1);
+    }
+    *SPI_CS = cs_config_nodma;
+}
+
+void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes, volatile size_t *ready_bytes, volatile const unsigned int *stop)
+{
+    size_t size_words = (size_bytes >> 2);
+    size_t ready = 0;
+
+    uint32_t dma_payload[] = {
+        (sizeof(uint32_t) << 16) | (cs_config_nodma & 0xff) | CS_TA,
+        0
+    };
+
+    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) dma_payload);
+    block_ram2spi.transfer_len = sizeof(dma_payload);
+    block_spi2ram.transfer_len = sizeof(uint32_t);
+
+    *SPI_CS = cs_config_nodma | CS_DMAEN | CS_ADCS | CS_CLEAR_RX | CS_CLEAR_TX;
+    while(size_words-- && (!stop || !*stop))
+    {
+        dma_payload[1] = *rbuffer;
+        block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) (wbuffer++));
+
+        dma_run_async(0, &block_ram2spi);
+        dma_run_async(1, &block_spi2ram);
+        dma_wait_transfer_done(1);
+
+        ready += sizeof(uint32_t);
+        *ready_bytes = ready;
     }
     *SPI_CS = cs_config_nodma;
 }

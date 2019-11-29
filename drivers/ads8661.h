@@ -12,6 +12,7 @@ uint16_t ads8661_read(uint16_t address);
 uint32_t ads8661_sense(void);
 
 void ads8661_stream_blocking(uint32_t *buf, size_t maxlen);
+void ads8661_stream_nonblocking(uint32_t *buf, size_t maxlen, volatile size_t *ready_bytes, volatile const unsigned int *stop);
 
 // buf must contain at least 9 uint32_t elements.
 // sizeof(buf) >= 36

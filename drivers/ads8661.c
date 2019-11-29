@@ -76,6 +76,14 @@ void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
 #endif
 }
 
+void ads8661_stream_nonblocking(uint32_t *buf, size_t maxlen, volatile size_t *ready_bytes, volatile const unsigned int *stop)
+{
+    union command_u payload_nop = {.u32 = 0x00000000};
+    uint32_t tmp;
+    spi_rw_dma32(&payload_nop.u32, &tmp, sizeof(payload_nop));
+    spi_rw_dma32_nonblocking(&payload_nop.u32, buf, maxlen*sizeof(uint32_t), ready_bytes, stop);
+}
+
 void ads8661_dump(uint32_t *buf)
 {
     for(size_t i = 0x00; i <= 0x14; i += 4)
