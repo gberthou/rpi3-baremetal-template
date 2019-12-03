@@ -29,7 +29,7 @@ $(OBJDIR)/%.o : %.c
 default: $(LDSCRIPT) $(OBJS)
 	$(ARM)-gcc $(LDFLAGS) $(OBJS) -o $(BIN).elf $(LIBDIR) -T $(LDSCRIPT)
 	$(ARM)-objcopy $(BIN).elf -O binary $(BIN).img
-	$(ARM)-objdump -D $(BIN).elf > $(DISASDIR)/$(BIN)
+	$(ARM)-objdump -xd $(BIN).elf > $(DISASDIR)/$(BIN)
 
 build:
 	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app $(OBJDIR)/drivers $(DISASDIR)

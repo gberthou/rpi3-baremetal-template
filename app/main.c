@@ -60,6 +60,8 @@ void main2(void)
 {
     /* This code is going to be run on core 2 */
 
+    streamer_display_thread();
+
     for(;;)
     {
     }

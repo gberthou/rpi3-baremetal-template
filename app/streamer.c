@@ -9,6 +9,7 @@
 #include "calibration.h"
 
 #define BUFSIZE (1<<16)
+#define NONBLOCKING
 
 #define GPIO_DUT 26 // Pin used by the device under test to notify the monitor
 #define GPIO_MON 16 // Pin used by the monitor (RPI) to notidy the device under test
@@ -34,16 +35,28 @@ struct display_t
 
 static volatile unsigned int started = false;
 static volatile bool must_acquire = false;
+static volatile bool printing = false;
+static volatile bool measurement_ready;
+static volatile size_t ready_bytes;
+static volatile bool stop;
 static struct measurement_t measurement;
 static bool summary = false;
 
 static void acquire(struct measurement_t *measurement, size_t length)
 {
+    ready_bytes = 0;
+    stop = false;
+    
     measurement->tick_before = systimer_getticks();
+#ifdef NONBLOCKING
+    ads8661_stream_nonblocking(measurement->data, length, &ready_bytes, &stop);
+#else
     ads8661_stream_blocking(measurement->data, length);
+#endif
     measurement->tick_after = systimer_getticks();
 }
 
+#ifndef NONBLOCKING
 static void print_raw32_custom64(const void *data, size_t size)
 {
     const uint32_t *_data = data;
@@ -61,8 +74,6 @@ static void print_raw32_custom64(const void *data, size_t size)
         for(size_t j = 0; j < 32; j += 6)
             uart_putc(32 + ((value >> j) & 0x3f));
     }
-    uart_putc('\r');
-    uart_putc('\n');
 }
 
 static void display(const struct measurement_t *measurement, size_t length)
@@ -76,6 +87,8 @@ static void display(const struct measurement_t *measurement, size_t length)
         d.data[i] = measurement->data[i]; // Keep only the last 16bits, which correspond to the most-significant bits since endianness is reversed
 
     print_raw32_custom64(&d, sizeof(d));
+    uart_putc('\r');
+    uart_putc('\n');
 }
 
 static uint32_t reverse_endianness_and_extract(uint32_t x)
@@ -140,6 +153,7 @@ static void display_summary(const struct measurement_t *measurement)
     uart_print_hex(m_adc);
     uart_print("\r\n");
 }
+#endif
 
 void streamer_acquisition_thread(bool s)
 {
@@ -171,6 +185,7 @@ void streamer_gpio_thread(void)
             uint64_t tstop = -1ul;
 
             while(!gpio_in(GPIO_DUT)); // Wait until DUT is ready
+#ifndef NONBLOCKING
             if(i == 0) // Start
             {
                 if(!summary)
@@ -182,6 +197,11 @@ void streamer_gpio_thread(void)
                 if(!summary)
                     uart_print("Stop\r\n");
             }
+#else
+            if(i != 0) // Stop
+                tstop = systimer_getticks();
+
+#endif
 
             gpio_out(GPIO_MON, 1); // Prepare DUT
             while(gpio_in(GPIO_DUT)); // Wait until DUT is ready
@@ -193,15 +213,74 @@ void streamer_gpio_thread(void)
             }
             else // Stop measurement
             {
+                measurement_ready = false;
+                stop = true;
                 while(must_acquire); // Wait until acquisition is done
                 measurement.tick_stop = tstop;
+                measurement_ready = true;
+#ifndef NONBLOCKING
                 if(summary)
                     display_summary(&measurement);
                 else
                     display(&measurement, BUFSIZE);
+#else
+                while(printing);
+#endif
             }
             gpio_out(GPIO_MON, 0); // Notify DUT to resume
         }
     }
 }
 
+#ifdef NONBLOCKING
+static void u12_to_custom64(uint16_t u12, char *ret)
+{
+    ret[1] = ' ' + (u12 & 0x3f);
+    ret[0] = ' ' + ((u12 >> 6) & 0x3f);
+}
+#endif
+
+void streamer_display_thread(void)
+{
+#ifdef NONBLOCKING
+    while(!started);
+    printing = true;
+
+    for(;;)
+    {
+        size_t printed_bytes = 0;
+        while(!must_acquire);
+
+        uart_print("StreamNB\r\n");
+        while(!stop || printed_bytes < ready_bytes)
+        {
+            while(printed_bytes + sizeof(uint32_t) >= ready_bytes);
+            size_t offset_words = (printed_bytes >> 2);
+            size_t to_print_words = ((ready_bytes-printed_bytes) >> 2);
+            char buf[2];
+            for(size_t i = 0; i < to_print_words; ++i)
+            {
+                // data: XX XX CX AB
+                // Cast to uint16_t => CX AB
+                uint16_t u12 = measurement.data[offset_words + i]; 
+                // Reverse endianness and right shift => A BC
+                u12 = (((u12 & 0xff) << 4) | (u12 >> 12));
+                u12_to_custom64(u12, buf);
+                uart_putc(buf[0]);
+                uart_putc(buf[1]);
+            }
+            printed_bytes += (to_print_words << 2);
+        }
+        uart_print("\r\n");
+        uart_print_hex(ready_bytes >> 1); // Amount of measures
+        while(must_acquire);
+        while(!measurement_ready);
+        uart_print_hex(measurement.tick_before);
+        uart_print_hex(measurement.tick_after);
+        uart_print_hex(measurement.tick_start);
+        uart_print_hex(measurement.tick_stop);
+        uart_print("\r\n");
+        printing = false;
+    }
+#endif
+}

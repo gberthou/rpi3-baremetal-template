@@ -129,7 +129,7 @@ void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
     *SPI_CS = cs_config_nodma;
 }
 
-void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes, volatile size_t *ready_bytes, volatile const unsigned int *stop)
+void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes, volatile size_t *ready_bytes, volatile const bool *stop)
 {
     size_t size_words = (size_bytes >> 2);
     size_t ready = 0;

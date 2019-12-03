@@ -76,7 +76,7 @@ void ads8661_stream_blocking(uint32_t *buf, size_t maxlen)
 #endif
 }
 
-void ads8661_stream_nonblocking(uint32_t *buf, size_t maxlen, volatile size_t *ready_bytes, volatile const unsigned int *stop)
+void ads8661_stream_nonblocking(uint32_t *buf, size_t maxlen, volatile size_t *ready_bytes, volatile const bool *stop)
 {
     union command_u payload_nop = {.u32 = 0x00000000};
     uint32_t tmp;
