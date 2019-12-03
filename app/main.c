@@ -8,6 +8,7 @@
 #include "calibration.h"
 #include "streamer.h"
 #include "plot.h"
+#include "clock.h"
 
 void main0(void)
 {
@@ -70,6 +71,8 @@ void main2(void)
 void main3(void)
 {
     /* This code is going to be run on core 3 */
+
+    clock_thread();
 
     for(;;)
     {

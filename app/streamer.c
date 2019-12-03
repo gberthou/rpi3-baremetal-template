@@ -7,12 +7,20 @@
 #include "../drivers/ads8661.h"
 
 #include "calibration.h"
+#include "clock.h"
 
 #define BUFSIZE (1<<16)
 #define NONBLOCKING
+#define FASTCLOCK
 
 #define GPIO_DUT 26 // Pin used by the device under test to notify the monitor
 #define GPIO_MON 16 // Pin used by the monitor (RPI) to notidy the device under test
+
+#ifdef FASTCLOCK
+#define GETTICKS() (latest_clock)
+#else
+#define GETTICKS() (systimer_getticks())
+#endif
 
 struct measurement_t
 {
@@ -36,7 +44,6 @@ struct display_t
 static volatile unsigned int started = false;
 static volatile bool must_acquire = false;
 static volatile bool printing = false;
-static volatile bool measurement_ready;
 static volatile size_t ready_bytes;
 static volatile bool stop;
 static struct measurement_t measurement;
@@ -47,13 +54,13 @@ static void acquire(struct measurement_t *measurement, size_t length)
     ready_bytes = 0;
     stop = false;
     
-    measurement->tick_before = systimer_getticks();
+    measurement->tick_before = GETTICKS();
 #ifdef NONBLOCKING
     ads8661_stream_nonblocking(measurement->data, length, &ready_bytes, &stop);
 #else
     ads8661_stream_blocking(measurement->data, length);
 #endif
-    measurement->tick_after = systimer_getticks();
+    measurement->tick_after = GETTICKS();
 }
 
 #ifndef NONBLOCKING
@@ -182,7 +189,10 @@ void streamer_gpio_thread(void)
     {
         for(size_t i = 0; i < 2; ++i)
         {
+            // In non-blocking mode, tstop is irrelevant
+#ifndef NONBLOCKING
             uint64_t tstop = -1ul;
+#endif
 
             while(!gpio_in(GPIO_DUT)); // Wait until DUT is ready
 #ifndef NONBLOCKING
@@ -193,15 +203,12 @@ void streamer_gpio_thread(void)
             }
             else // Stop
             {
-                tstop = systimer_getticks();
+                tstop = GETTICKS();
                 if(!summary)
                     uart_print("Stop\r\n");
             }
-#else
-            if(i != 0) // Stop
-                tstop = systimer_getticks();
-
 #endif
+
 
             gpio_out(GPIO_MON, 1); // Prepare DUT
             while(gpio_in(GPIO_DUT)); // Wait until DUT is ready
@@ -209,16 +216,14 @@ void streamer_gpio_thread(void)
             if(i == 0) // Start measurement
             {
                 must_acquire = true; // Notify acquisition thread
-                measurement.tick_start = systimer_getticks();
+                measurement.tick_start = GETTICKS();
             }
             else // Stop measurement
             {
-                measurement_ready = false;
                 stop = true;
                 while(must_acquire); // Wait until acquisition is done
-                measurement.tick_stop = tstop;
-                measurement_ready = true;
 #ifndef NONBLOCKING
+                measurement.tick_stop = tstop;
                 if(summary)
                     display_summary(&measurement);
                 else
@@ -274,11 +279,9 @@ void streamer_display_thread(void)
         uart_print("\r\n");
         uart_print_hex(ready_bytes >> 1); // Amount of measures
         while(must_acquire);
-        while(!measurement_ready);
         uart_print_hex(measurement.tick_before);
         uart_print_hex(measurement.tick_after);
         uart_print_hex(measurement.tick_start);
-        uart_print_hex(measurement.tick_stop);
         uart_print("\r\n");
         printing = false;
     }
