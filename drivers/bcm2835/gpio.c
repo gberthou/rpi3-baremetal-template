@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "common.h"
+#include <drivers/common.h>
 #include "gpio.h"
 
 #define GPFSEL0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200000))

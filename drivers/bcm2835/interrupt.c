@@ -2,7 +2,7 @@
 #include <stddef.h>
 
 #include "interrupt.h"
-#include "common.h"
+#include <drivers/common.h>
 
 #define IRQPEN ((volatile uint32_t*)(PERIPHERAL_BASE + 0x0000b204))
 #define IRQENA ((volatile uint32_t*)(PERIPHERAL_BASE + 0x0000b210))

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "common.h"
+#include <drivers/common.h>
 #include "dma.h"
 
 struct dma_chan_t

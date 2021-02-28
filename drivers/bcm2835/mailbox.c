@@ -2,11 +2,11 @@
  * Pretty dumb mailbox system
  *   The MailboxReceive function should store the messages received in
  *   other channels instead of throwing them away. Since at this point I
- *   don't need the other channels, I keep it simple at the first place.
+ *   don't need the other channels, I keep it simple in the first place.
  */
 
 #include "mailbox.h"
-#include "common.h"
+#include <drivers/common.h>
 
 #if 0
 #define memoryBarrier() __asm__ volatile("mcr p15, 0, %0, c7, c10, 5" :: "r"(0))

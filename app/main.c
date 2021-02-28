@@ -2,13 +2,12 @@
 
 #include "../core/irq.h"
 
-#include "../drivers/interrupt.h"
-#include "../drivers/gpio.h"
-#include "../drivers/uart.h"
-#include "../drivers/systimer.h"
-#include "../drivers/framebuffer.h"
-#include "../drivers/spi.h"
-#include "../drivers/adc121s101.h"
+#include <drivers/bcm2835/interrupt.h>
+#include <drivers/bcm2835/gpio.h>
+#include <drivers/bcm2835/uart.h>
+#include <drivers/bcm2835/systimer.h>
+#include <drivers/bcm2835/framebuffer.h>
+#include <drivers/bcm2835/spi.h>
 
 #define GPIO_TEST 26
 
@@ -27,18 +26,22 @@ void __attribute__((__naked__)) IRQHandler(void)
                          "subs pc, lr, #4");
 }
 
-/*
 static void screen_demo(void)
 {
     struct fb_info_t fb;
 
-    print_hex(fb_init(&fb, 640, 480));
+    uart_print_hex(fb_init(&fb, 640, 480));
 
     for(uint32_t y = 0; y < 480; ++y)
         for(uint32_t x = 0; x < 640; ++x)
-            fb_put_color(&fb, x, y, 0xff00ffff);
+        {
+            uint8_t X = (x * 255) / 640;
+            uint8_t Y = (y * 255) / 480;
+
+            uint32_t color = 0x01000000 * X + 0x00010000 * Y + 0xff;
+            fb_put_color(&fb, x, y, color);
+        }
 }
-*/
 
 static void init_gpio(void)
 {
@@ -60,17 +63,15 @@ void main0(void)
     /* This code is going to be run on core 0 */
     init_gpio();
     uart_init_1415();
-    adc_init();
 
     uart_print("Hello world!\r\n");
 
-    IRQ_ENABLE();
+    //IRQ_ENABLE();
 
-    //screen_demo();
+    screen_demo();
 
     for(;;)
     {
-        cpt0 = adc_read();
         wait_us(1);
 
         uart_print("Ticks =\r\n");

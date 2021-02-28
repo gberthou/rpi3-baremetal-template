@@ -1,5 +1,5 @@
+#include <drivers/bcm2835/spi.h>
 #include "ads8661.h"
-#include "spi.h"
 
 #define SPI_DMA
 

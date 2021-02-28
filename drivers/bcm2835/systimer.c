@@ -1,4 +1,4 @@
-#include "common.h"
+#include <drivers/common.h>
 #include "systimer.h"
 
 #define SYSTEM_TIMER_BASE (PERIPHERAL_BASE + 0x00003000)
