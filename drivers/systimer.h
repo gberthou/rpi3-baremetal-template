@@ -1,7 +1,7 @@
 #ifndef SYSTEM_TIMER_H
 #define SYSTEM_TIMER_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 uint64_t systimer_getticks(void);
 

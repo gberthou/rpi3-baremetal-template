@@ -4,7 +4,7 @@ BIN=kernel7
 OBJDIR=obj
 DISASDIR=disas
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7 -marm -mthumb-interwork -O2
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7+nofp -mthumb-interwork -O2
 
 ASFLAGS=-mcpu=cortex-a7
 
@@ -29,7 +29,7 @@ $(OBJDIR)/%.o : %.c
 default: $(LDSCRIPT) $(OBJS)
 	$(ARM)-gcc $(LDFLAGS) $(OBJS) -o $(BIN).elf $(LIBDIR) -T $(LDSCRIPT)
 	$(ARM)-objcopy $(BIN).elf -O binary $(BIN).img
-	$(ARM)-objdump -D $(BIN).elf > $(DISASDIR)/$(BIN)
+	$(ARM)-objdump -xd $(BIN).elf > $(DISASDIR)/$(BIN)
 
 build:
 	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app $(OBJDIR)/drivers $(DISASDIR)

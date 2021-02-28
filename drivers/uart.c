@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <stddef.h>
+
 #include "common.h"
 #include "gpio.h"
 
@@ -7,7 +10,7 @@
 #define GPIO_RX 15
 
 #define UART_CLOCK 48000000 // Default value, modifiable using `init_uart_clock` parameter of boot/config.txt
-#define BAUDRATE   115200
+#define BAUDRATE   921600
 
 #define BRD_VALUE ((float)UART_CLOCK / (16.f * BAUDRATE))
 #define IBRD_VALUE ((unsigned int) BRD_VALUE)
@@ -22,6 +25,8 @@
 #define ICR  ((volatile uint32_t*)(UART_BASE + 0x44))
 
 /* Most of the code is inspired from https://github.com/dwelch67/raspberrypi/blob/master/uartx01/uartx01.c */
+
+static const char FIGURES[] = "0123456789abcdef";
 
 void uart_init_1415(void)
 {
@@ -46,6 +51,12 @@ void uart_putc(uint8_t c)
     *DR = c;
 }
 
+uint8_t uart_getc(void)
+{
+    while(*FR & 0x02);
+    return *DR;
+}
+
 void uart_print(const char *str)
 {
     char c;
@@ -53,10 +64,15 @@ void uart_print(const char *str)
         uart_putc(c);
 }
 
+void uart_error(const char *str)
+{
+    uart_print(str);
+    for(;;)
+        __asm__ __volatile__("nop");
+}
+
 static void u64_to_hex(char *dst, uint64_t x)
 {
-    static const char FIGURES[] = "0123456789abcdef";
-
     for(unsigned int i = 0; i < 16; ++i)
     {
         dst[15 - i] = FIGURES[x & 0xf];
@@ -73,5 +89,20 @@ void uart_print_hex(uint64_t x)
 
     u64_to_hex(tmp, x);
     uart_print(tmp);
+}
+
+void uart_print_raw32(const void *data, size_t size)
+{
+    const uint32_t *_data = data;
+    size >>= 2;
+
+    while(size--)
+    {
+        uint32_t value = *_data++;
+        for(size_t i = 8; i-- > 0;)
+            uart_putc(FIGURES[(value >> (i << 2)) & 0xf]);
+    }
+    uart_putc('\r');
+    uart_putc('\n');
 }
 
