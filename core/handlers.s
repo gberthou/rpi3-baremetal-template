@@ -47,6 +47,10 @@ bssloop:
     b bssloop
     
 launch:
+    ;@ First, run clock_max_out_arm on a valid stack
+    ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
+    bl clock_max_out_arm
+
     mov r4, #0x40000000
 
     ldr r5, =start_core1

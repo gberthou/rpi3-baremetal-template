@@ -64,3 +64,19 @@ void dma_memcpy32(uint32_t *dst, const uint32_t *src, size_t size_bytes)
     dma_wait_transfer_done(DMA_CHAN_MEMCPY);
 }
 
+void dma_memcpy32_physical_dst(uint32_t *dst, const uint32_t *src, size_t size_bytes)
+{
+    static __attribute__((aligned(256))) struct dma_block_t block;
+    block.transfer_info = (1 << 8) // SRC_INC
+                        | (1 << 4) // DST_INC
+                        ;
+    block.src_addr = VIRT_TO_PHYS((uint32_t) src);
+    block.dst_addr = (uint32_t) dst;
+    block.transfer_len = size_bytes;
+    block.stride = 0;
+    block.next = 0;
+
+    dma_run_async(DMA_CHAN_MEMCPY, &block);
+    dma_wait_transfer_done(DMA_CHAN_MEMCPY);
+}
+

@@ -26,6 +26,7 @@ void dma_wait_transfer_done(size_t channel);
 void dma_run_async(size_t channel, const struct dma_block_t *block);
 
 void dma_memcpy32(uint32_t *dst, const uint32_t *src, size_t size_bytes);
+void dma_memcpy32_physical_dst(uint32_t *dst, const uint32_t *src, size_t size_bytes);
 
 #endif
 

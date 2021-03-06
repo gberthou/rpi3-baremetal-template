@@ -4,7 +4,7 @@ BIN=kernel7
 OBJDIR=obj
 DISASDIR=disas
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7+nofp -mthumb-interwork -O2
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7+nofp -mthumb-interwork -O3
 INCLUDES=-I.
 
 ASFLAGS=-mcpu=cortex-a7
@@ -13,8 +13,8 @@ LDFLAGS=-nostartfiles
 
 DEFINES=
 
-CFILES=$(wildcard core/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard app/*.c)
-ASFILES=$(wildcard core/*.s)
+CFILES=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app/*.c)
+ASFILES=$(wildcard core/*.s) resource/console.s
 
 LDSCRIPT=ldscript.ld
 
@@ -33,7 +33,7 @@ default: $(LDSCRIPT) $(OBJS)
 	$(ARM)-objdump -xd $(BIN).elf > $(DISASDIR)/$(BIN)
 
 build:
-	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(DISASDIR)
+	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR)
 
 clean:
 	rm -f $(OBJS)
