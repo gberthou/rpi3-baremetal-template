@@ -9,6 +9,7 @@
 #include <drivers/bcm2835/framebuffer.h>
 #include <drivers/bcm2835/spi.h>
 #include <drivers/bcm2835/clock.h>
+#include <drivers/bcm2835/vpu.h>
 #include <drivers/virtual/console.h>
 
 #define GPIO_TEST 26
@@ -96,6 +97,11 @@ static void screen_demo(void)
     size_t padding;
 
     uart_print_hex(fb_init(&fb, 640, 480));
+
+    extern uint8_t test_bin_contents[];
+    uint32_t ret;
+    int error = vpu_execute_code_with_stack(256, test_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, 0, 0, 0, &ret);
+
     padding = (fb.pitch >> 2) - fb.width;
 
     for(size_t frame = 0; ; ++frame)
@@ -113,9 +119,15 @@ static void screen_demo(void)
             }
             ptr += padding;
         }
+        if(error != 0)
+        {
+            console_print(&fb, 1, 1, "VPU error");
+            console_printhex(&fb, 1, 2, error);
+        }
 
         fb_copy_buffer(&fb);
     }
+    for(;;);
 }
 
 static void init_gpio(void)
