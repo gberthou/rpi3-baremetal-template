@@ -13,6 +13,8 @@
 #include <drivers/virtual/console.h>
 
 #define GPIO_TEST 26
+#define WIDTH 800
+#define HEIGHT 480
 
 static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
@@ -96,11 +98,11 @@ static void screen_demo(void)
     struct fb_info_t fb;
     size_t padding;
 
-    uart_print_hex(fb_init(&fb, 640, 480));
+    uart_print_hex(fb_init(&fb, 800, 480));
 
     extern uint8_t test_bin_contents[];
     uint32_t ret;
-    int error = vpu_execute_code_with_stack(256, test_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, 0, 0, 0, &ret);
+    int error = vpu_execute_code_with_stack(256, test_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, WIDTH, HEIGHT, 0, &ret);
 
     padding = (fb.pitch >> 2) - fb.width;
 
@@ -139,12 +141,6 @@ static void init_gpio(void)
     interrupt_enable(INT_SOURCE_GPIO);
 }
 
-static void wait_us(uint32_t us)
-{
-   uint64_t tend = systimer_getticks() + us;
-   while(systimer_getticks() < tend);
-}
-
 void main0(void)
 {
     /* This code is going to be run on core 0 */
@@ -159,7 +155,7 @@ void main0(void)
 
     for(;;)
     {
-        wait_us(1);
+        systimer_wait_us(1);
 
         /*
         uart_print("Ticks =\r\n");

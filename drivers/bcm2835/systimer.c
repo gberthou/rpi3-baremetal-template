@@ -10,3 +10,10 @@ uint64_t systimer_getticks(void)
     return *TICKS;
 }
 
+void systimer_wait_us(uint32_t us)
+{
+   uint64_t tend = systimer_getticks() + us;
+   while(systimer_getticks() < tend);
+}
+
+
