@@ -10,7 +10,7 @@
 #define GPIO_RX 15
 
 #define UART_CLOCK 48000000 // Default value, modifiable using `init_uart_clock` parameter of boot/config.txt
-#define BAUDRATE   921600
+#define BAUDRATE   31250
 
 #define BRD_VALUE ((float)UART_CLOCK / (16.f * BAUDRATE))
 #define IBRD_VALUE ((unsigned int) BRD_VALUE)
