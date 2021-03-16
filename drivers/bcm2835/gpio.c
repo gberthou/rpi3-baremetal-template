@@ -63,6 +63,11 @@ unsigned int gpio_in(unsigned int gpio)
     return (GPLEV0[offset] & mask) != 0;
 }
 
+uint32_t gpio_array_in(size_t index)
+{
+    return GPLEV0[index];
+}
+
 void gpio_set_async_edge_detect(unsigned int gpio, enum gpio_edge_e edge, unsigned int enable)
 {
     size_t offset = (gpio > 31 ? 1 : 0);
