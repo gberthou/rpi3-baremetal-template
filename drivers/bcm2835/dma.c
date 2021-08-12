@@ -2,6 +2,8 @@
 #include <stddef.h>
 
 #include <drivers/common.h>
+#include <utils.h>
+#include <platform.h>
 #include "dma.h"
 
 struct dma_chan_t
@@ -37,7 +39,7 @@ void dma_wait_transfer_done(size_t channel)
     volatile struct dma_chan_t *ptr = DMAX(channel);
     while((ptr->cs & 0x1));
     ptr->cs = 0x80000000;
-    __asm__ __volatile__("dsb");
+    memoryBarrier();
 }
 
 void dma_run_async(size_t channel, const struct dma_block_t *block)

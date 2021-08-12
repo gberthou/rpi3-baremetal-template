@@ -1,20 +1,36 @@
+# Possible values: 1, 3
+RPI ?= 3
+ifeq ($(RPI),1)
+  CARCH=-march=armv6z
+  ASARCH=-march=armv6z
+  BIN=kernel
+else ifeq ($(RPI),3)
+  CARCH=-mcpu=cortex-a7+nofp
+  ASFLAGS=-mcpu=cortex-a7
+  BIN=kernel7
+else
+  $(error Invalid RPI value. Try either of the following: 1, 3)
+endif
+
 ARM=arm-none-eabi
-BIN=kernel7
 
-OBJDIR=obj
-DISASDIR=disas
+OBJDIR=obj-$(RPI)
+DISASDIR=$(OBJDIR)/disas-$(RPI)
+RPIDIR=rpi$(RPI)
+RPIAPPDIR=$(RPIDIR)/app
 
-CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -fno-stack-limit -mno-apcs-frame -nostartfiles -ffreestanding -mcpu=cortex-a7+nofp -mthumb-interwork -O3
-INCLUDES=-I.
 
-ASFLAGS=-mcpu=cortex-a7
+CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -nostartfiles -ffreestanding $(CARCH) -mthumb-interwork -O3
+INCLUDES=-I. -I$(RPIDIR)
+
+ASFLAGS=$(ASARCH)
 
 LDFLAGS=-nostartfiles
 
-DEFINES=
+DEFINES=-DRPI=$(RPI)
 
-CFILES=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app/*.c)
-ASFILES=$(wildcard core/*.s) resource/console.s
+CFILES=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app-common/*.c) $(wildcard $(RPIDIR)/*.c) $(wildcard $(RPIAPPDIR)/*.c)
+ASFILES=$(wildcard core/*.s) $(wildcard $(RPIDIR)/*.s) resource/console.s
 
 LDSCRIPT=ldscript.ld
 
@@ -33,7 +49,7 @@ default: $(LDSCRIPT) $(OBJS)
 	$(ARM)-objdump -xd $(BIN).elf > $(DISASDIR)/$(BIN)
 
 build:
-	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR)
+	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR)
 
 clean:
 	rm -f $(OBJS)

@@ -18,5 +18,8 @@
 #define IRQ_DISABLE() __asm__ __volatile__("cpsid i")
 #endif
 
+#define INTERRUPT void __attribute__((naked))
+#define RETI __asm__ volatile("subs pc, lr, #4")
+
 #endif
 

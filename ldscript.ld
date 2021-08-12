@@ -7,7 +7,7 @@ SECTIONS
 {
     .text : ALIGN(4)
     {
-        KEEP(obj/core/vector.o(.text.boot))
+        KEEP(*(.text.boot))
         . = ALIGN(4);
         *(.text .text.*)
     } > KERNEL

@@ -2,6 +2,7 @@
 #include <stddef.h>
 
 #include <drivers/common.h>
+#include <platform.h>
 #include "gpio.h"
 
 #define UART_BASE (PERIPHERAL_BASE + 0x00201000)

@@ -102,38 +102,3 @@ core2stack: .word 0x00007800
 core3stack: .word 0x00007400
 
 irqstack: .word 0x00007000
-
-.global UndefinedHandler
-UndefinedHandler:
-;@ b UndefinedHandler
-subs pc, lr, #4
-
-.global SwiHandler
-SwiHandler:
-;@ b SwiHandler
-subs pc, lr, #4
-
-.global PrefetchHandler
-PrefetchHandler:
-;@ b PrefetchHandler
-subs pc, lr, #4
-
-.global DataHandler
-DataHandler:
-;@ b DataHandler
-subs pc, lr, #4
-
-.global UnusedHandler
-UnusedHandler:
-;@ b UnusedHandler
-subs pc, lr, #4
-
-;@ Implemented in `app/main.c`
-;@.global IRQHandler
-;@IRQHandler:
-;@subs pc, lr, #4
-
-.global FIQHandler
-FIQHandler:
-;@ b FIQHandler
-subs pc, lr, #4

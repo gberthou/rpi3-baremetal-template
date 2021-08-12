@@ -1,4 +1,5 @@
 #include <drivers/common.h>
+#include <platform.h>
 #include "spi.h"
 #include "gpio.h"
 #include "dma.h"

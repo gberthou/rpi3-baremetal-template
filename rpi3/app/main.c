@@ -20,17 +20,6 @@ static volatile uint64_t ticks = 0xdeadbeefdeadbeefl;
 static volatile uint32_t cpt0 = 0;
 static volatile uint32_t cpt1 = 0;
 
-void __attribute__((__naked__)) IRQHandler(void)
-{
-    __asm__ __volatile__("push {r0-r5, r12, lr}");
-
-    gpio_ack_interrupt(GPIO_TEST);
-    --cpt1;
-
-    __asm__ __volatile__("pop {r0-r5, r12, lr}\r\n"
-                         "subs pc, lr, #4");
-}
-
 #if 0
 static size_t to_hex(size_t x)
 {

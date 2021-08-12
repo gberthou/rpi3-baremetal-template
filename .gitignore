@@ -1,4 +1,3 @@
 *.img
 *.elf
-disas
-obj
+obj-*

@@ -7,12 +7,9 @@
 
 #include "mailbox.h"
 #include <drivers/common.h>
+#include <utils.h>
+#include <platform.h>
 
-#if 0
-#define memoryBarrier() __asm__ volatile("mcr p15, 0, %0, c7, c10, 5" :: "r"(0))
-#else
-#define memoryBarrier() __asm__ volatile("dsb")
-#endif
 
 #define MAIL_EMPTY (1u << 30)
 #define MAIL_FULL  (1u << 31)
