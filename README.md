@@ -28,7 +28,7 @@ cd vc4-toolchain && ./build-all.sh 2>&1 # cf. vc4-toolchain/README.md
 ### 1.2. Basic Initialization
 Simply clone this repo without caring about submodules.
 
-### 2. Build
+## 2. Build
 All the `make`-related commands assume Raspberry Pi 3 by default (`RPI=3`).
 If you want to build for Raspberry Pi 1, specify `RPI=1` with every `make`-related command.
 
