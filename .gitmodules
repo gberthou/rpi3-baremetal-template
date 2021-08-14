@@ -1,0 +1,3 @@
+[submodule "vc4-toolchain"]
+	path = vc4-toolchain
+	url = https://github.com/itszor/vc4-toolchain
