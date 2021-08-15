@@ -89,9 +89,9 @@ static void screen_demo(void)
 
     uart_print_hex(fb_init(&fb, 800, 480));
 
-    extern uint8_t test_bin_contents[];
+    extern uint8_t vc4_bin_contents[];
     uint32_t ret;
-    int error = vpu_execute_code_with_stack(256, test_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, WIDTH, HEIGHT, 0, &ret);
+    int error = vpu_execute_code_with_stack(256, vc4_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, WIDTH, HEIGHT, 0, &ret);
 
     padding = (fb.pitch >> 2) - fb.width;
 
