@@ -8,14 +8,44 @@
 #define VIDEOBUS_OFFSET 0x80000000
 #define CPU_ADDRESS     0x3e000000
 
-/* Please see
- * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
- */
+bool fb_init_cb(const uint32_t *message, void *context)
+{
+    struct fb_info_t *fb = context;
+    switch(*message)
+    {
+        case 0x40008:
+            fb->pitch = message[3];
+            break;
+
+        case 0x48003:
+            fb->width = message[3];
+            fb->height = message[4];
+            break;
+
+        case 0x40001:
+        {
+            uint32_t physical_ptr = message[3];
+            fb->physical_ptr = (void*) physical_ptr;
+            fb->ptr          = (uint32_t*) ((physical_ptr & 0x00ffffff) | CPU_ADDRESS);
+            break;
+        }
+
+        case 0x48004:
+        case 0x48005:
+        case 0x48006:
+            break;
+
+        default: // Panic
+            return false;
+    }
+    return true;
+}
+
 int fb_init(struct fb_info_t *fb, uint32_t width, uint32_t height)
 {
-    volatile uint32_t __attribute__((aligned(16))) sequence[] = {
-        0, // size of the whole structure
-        0, // request
+    const uint32_t request[] = {
+        0, // Size of the whole structure (ignore)
+        0, // Request
         
         // TAG 0
         0x48003, // Set width/height
@@ -57,58 +87,17 @@ int fb_init(struct fb_info_t *fb, uint32_t width, uint32_t height)
 
         0 // End TAG
     };
-    sequence[0] = sizeof(sequence);
-    
+    if(!mailbox_request(request, sizeof(request), fb_init_cb, fb))
+        return 1;
 
-    // Send the requested values
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence));
-    
-    // Now get the real values
-    if(mailbox_receive(8) == 0 || sequence[1] == 0x80000000) // Ok
-    {
-        volatile const uint32_t *ptr = sequence + 2;
-        while(*ptr)
-        {
-            switch(*ptr++)
-            {
-                case 0x40008:
-                    fb->pitch = ptr[2];
-                    break;
+    size_t ptr_size = fb->height * fb->pitch;
+    void *tmp = malloc(ptr_size);
+    if(tmp == NULL)
+        return 1;
 
-                case 0x48003:
-                    fb->width = ptr[2];
-                    fb->height = ptr[3];
-                    break;
-
-                case 0x40001:
-                {
-                    uint32_t physical_ptr = ptr[2];
-                    fb->physical_ptr = (void*) physical_ptr;
-                    fb->ptr          = (uint32_t*) ((physical_ptr & 0x00ffffff) | CPU_ADDRESS);
-                    break;
-                }
-
-                case 0x48004:
-                case 0x48005:
-                case 0x48006:
-                    break;
-
-                default: // Panic
-                    return 1;
-            }
-            ptr += *ptr / 4 + 2;
-        }
-
-        size_t ptr_size = fb->height * fb->pitch;
-        void *tmp = malloc(ptr_size);
-        if(tmp == NULL)
-            return 1;
-
-        fb->ptr_size = ptr_size;
-        fb->tmp = tmp;
-        return 0;
-    }
-    return 1;
+    fb->ptr_size = ptr_size;
+    fb->tmp = tmp;
+    return 0;
 }
 
 void fb_put_color(struct fb_info_t *fb, uint32_t x, uint32_t y, uint32_t color)

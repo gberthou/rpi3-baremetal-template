@@ -12,11 +12,132 @@
 #define MEM_FLAG_NO_INIT          (1 << 5) /* don't initialise (default is initialise to all ones) */
 #define MEM_FLAG_HINT_PERMALOCK   (1 << 6) /* Likely to be locked for long periods of time. */
 
-int vpu_execute_code(const void *function_pointer, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3, uint32_t r4, uint32_t r5, uint32_t *ret)
+#define MEM_HANDLE_INVALID 0xffffffff
+
+const struct vpu_mem_t VPU_MEM_EMPTY = {0, NULL};
+
+static bool vpu_malloc_allocate_cb(const uint32_t *message, void *context)
 {
-    volatile uint32_t __attribute__((aligned(16))) sequence[] = {
+    if(*message == 0x0003000c)
+    {
+        uint32_t *stack_handle = context;
+        *stack_handle = message[3];
+        return true;
+    }
+    return false;
+}
+
+static bool vpu_malloc_lock_cb(const uint32_t *message, void *context)
+{
+    if(*message == 0x0003000d)
+    {
+        uint32_t *stack_address = context;
+        *stack_address = message[3];
+        return true;
+    }
+    return false;
+}
+
+struct vpu_mem_t vpu_malloc(size_t size)
+{
+    struct vpu_mem_t mem;
+    uint32_t address = -1u;
+
+    size = (size + 3) & ~0x3ul;
+
+    // 1. Allocate
+    const uint32_t request_allocate[] = {
+        0, // Size of the whole structure (ignore)
+        0, // Request
+        
+        0x0003000c, // Allocate memory
+        12, // size
+        0, // request
+        size,
+        4, // alignment
+        MEM_FLAG_NORMAL | MEM_FLAG_NO_INIT,
+
+        0 // End TAG
+    };
+    if(!mailbox_request(request_allocate, sizeof(request_allocate), vpu_malloc_allocate_cb, &mem.handle))
+        return VPU_MEM_EMPTY;
+
+    // 2. Get address (lock)
+    const uint32_t request_lock[] = {
         0, // size of the whole structure
         0, // request
+        
+        0x0003000d, // Lock memory
+        4, // size
+        0, // request
+        mem.handle,
+
+        0 // End TAG
+    };
+    if(!mailbox_request(request_lock, sizeof(request_lock), vpu_malloc_lock_cb, &address))
+    {
+        mem.handle = MEM_HANDLE_INVALID;
+        vpu_free(&mem);
+        return VPU_MEM_EMPTY;
+    }
+    mem.ptr = (void*) address;
+    return mem;
+}
+
+bool vpu_free(const struct vpu_mem_t *mem)
+{
+    // 1. Unlock
+    if(mem->handle != MEM_HANDLE_INVALID)
+    {
+        const uint32_t request_unlock[] = {
+            0, // Size of the whole structure (ignore)
+            0, // Request
+            
+            0x0003000e, // Unlock memory
+            4, // size
+            0, // request
+            mem->handle,
+
+            0 // End TAG
+        };
+        mailbox_request(request_unlock, sizeof(request_unlock), mailbox_ack, NULL);
+    }
+
+    // 2. Free
+    if(mem->ptr != NULL)
+    {
+        const uint32_t request_free[] = {
+            0, // Size of the whole structure (ignore)
+            0, // Request
+            
+            0x0003000f, // Free memory
+            4, // size
+            0, // request
+            mem->handle,
+
+            0 // End TAG
+        };
+        return mailbox_request(request_free, sizeof(request_free), mailbox_ack, NULL);
+    }
+    return true;
+}
+
+static bool vpu_execute_code_cb(const uint32_t *message, void *context)
+{
+    if(*message == 0x00030010)
+    {
+        uint32_t *returnValue = context;
+        *returnValue = message[3];
+        return true;
+    }
+    return false;
+}
+
+int vpu_execute_code(const void *function_pointer, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3, uint32_t r4, uint32_t r5, uint32_t *ret)
+{
+    const uint32_t request[] = {
+        0, // Size of the whole structure (ignore)
+        0, // Request
         
         // TAG 0
         0x00030010, // Execute code
@@ -32,168 +153,26 @@ int vpu_execute_code(const void *function_pointer, uint32_t r0, uint32_t r1, uin
 
         0 // End TAG
     };
-    sequence[0] = sizeof(sequence);
-    
 
-    // Send the requested values
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence));
-    if(mailbox_receive(8) == 0 || sequence[1] == 0x80000000) // Ok
-    {
-        volatile const uint32_t *ptr = sequence + 2;
-        while(*ptr)
-        {
-            switch(*ptr++)
-            {
-                case 0x00030010:
-                    *ret = ptr[2];
-                    break;
-
-                default: // Panic
-                    return 1;
-            }
-            ptr += *ptr / 4 + 2;
-        }
-        return 0;
-    }
-    return 1;
+    if(!mailbox_request(request, sizeof(request), vpu_execute_code_cb, ret))
+        return 1;
+    return 0;
 }
 
 int vpu_execute_code_with_stack(size_t stack_size, const void *function_pointer, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3, uint32_t r4, uint32_t *ret)
 {
-    volatile const uint32_t *ptr;
-    uint32_t stack_handle = -1u;
-    uint32_t stack_address = -1u;
-
-    stack_size = (stack_size + 3) & ~0x3ul;
-
     // 1. Allocate stack
-    volatile uint32_t __attribute__((aligned(16))) sequence0[] = {
-        0, // size of the whole structure
-        0, // request
-        
-        0x0003000c, // Allocate memory
-        12, // size
-        0, // request
-        stack_size,
-        4, // alignment
-        MEM_FLAG_NORMAL | MEM_FLAG_NO_INIT,
-
-        0 // End TAG
-    };
-    sequence0[0] = sizeof(sequence0);
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence0));
-    if(mailbox_receive(8) != 0 && sequence0[1] != 0x80000000)
+    struct vpu_mem_t mem_stack = vpu_malloc(stack_size);
+    if(mem_stack.ptr == NULL)
         return 1;
-    ptr = sequence0 + 2;
-    while(*ptr)
-    {
-        switch(*ptr++)
-        {
-            case 0x0003000c:
-                stack_handle = ptr[2];
-                break;
 
-            default: // Panic
-                return 2;
-        }
-        ptr += *ptr / 4 + 2;
-    }
+    // 2. Run
+    if(vpu_execute_code(function_pointer, r0, r1, r2, r3, r4, (uint32_t)mem_stack.ptr + stack_size, ret))
+        return 2;
 
-    // 2. Get stack address (lock)
-    volatile uint32_t __attribute__((aligned(16))) sequence1[] = {
-        0, // size of the whole structure
-        0, // request
-        
-        0x0003000d, // Lock memory
-        4, // size
-        0, // request
-        stack_handle,
-
-        0 // End TAG
-    };
-    sequence1[0] = sizeof(sequence1);
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence1));
-    if(mailbox_receive(8) != 0 && sequence1[1] != 0x80000000)
+    // 3. Free stack
+    if(!vpu_free(&mem_stack))
         return 3;
-    ptr = sequence1 + 2;
-    while(*ptr)
-    {
-        switch(*ptr++)
-        {
-            case 0x0003000d:
-                stack_address = ptr[2];
-                break;
-
-            default: // Panic
-                return 4;
-        }
-        ptr += *ptr / 4 + 2;
-    }
-
-    // 3. Run
-    if(vpu_execute_code(function_pointer, r0, r1, r2, r3, r4, stack_address + stack_size, ret))
-        return 5;
-
-    // 4. Unlock stack
-    volatile uint32_t __attribute__((aligned(16))) sequence2[] = {
-        0, // size of the whole structure
-        0, // request
-        
-        0x0003000e, // Unlock memory
-        4, // size
-        0, // request
-        stack_handle,
-
-        0 // End TAG
-    };
-    sequence2[0] = sizeof(sequence2);
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence2));
-    if(mailbox_receive(8) != 0 && sequence2[1] != 0x80000000)
-        return 6;
-    ptr = sequence2 + 2;
-    while(*ptr)
-    {
-        switch(*ptr++)
-        {
-            case 0x0003000e:
-                break;
-
-            default: // Panic
-                return 7;
-        }
-        ptr += *ptr / 4 + 2;
-    }
-
-    // 5. Free stack
-    volatile uint32_t __attribute__((aligned(16))) sequence3[] = {
-        0, // size of the whole structure
-        0, // request
-        
-        0x0003000f, // Free memory
-        4, // size
-        0, // request
-        stack_handle,
-
-        0 // End TAG
-    };
-    sequence3[0] = sizeof(sequence3);
-    mailbox_send(8, VIDEOBUS_OFFSET + ((uint32_t)sequence3));
-    if(mailbox_receive(8) != 0 && sequence3[1] != 0x80000000)
-        return 8;
-    ptr = sequence3 + 2;
-    while(*ptr)
-    {
-        switch(*ptr++)
-        {
-            case 0x0003000f:
-                break;
-
-            default: // Panic
-                return 9;
-        }
-        ptr += *ptr / 4 + 2;
-    }
-
     return 0;
 }
 

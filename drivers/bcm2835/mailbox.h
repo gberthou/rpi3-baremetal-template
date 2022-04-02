@@ -2,13 +2,18 @@
 #define DRIVERS_MAILBOX_H
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-#define MAILBOX_ID 8
+/* Please see
+ * https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
+ */
 
-#define MAILBOX_RESPONSE_SUCCESS 0x80000000u
+typedef bool (*mailbox_callback_t)(const uint32_t *, void *);
 
-void mailbox_send(uint8_t channel, uint32_t data);
-uint32_t mailbox_receive(uint8_t channel);
+bool mailbox_request(const uint32_t *request, size_t size, mailbox_callback_t callback, void *context);
+
+bool mailbox_ack(const uint32_t *message, void *context);
 
 #endif
 

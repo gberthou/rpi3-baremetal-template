@@ -22,7 +22,7 @@ RPIAPPDIR=$(RPIDIR)/app
 
 INCLUDES=-I. -I$(RPIDIR)
 
-ARM_CFLAGS=-g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -nostartfiles -ffreestanding $(ARM_CARCH) -mthumb-interwork -O3
+ARM_CFLAGS=-std=c2x -g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -nostartfiles -ffreestanding $(ARM_CARCH) -mthumb-interwork -O3
 ARM_ASFLAGS=$(ARM_ASARCH)
 ARM_LDFLAGS=-nostartfiles
 ARM_DEFINES=-DRPI=$(RPI)
