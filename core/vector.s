@@ -1,4 +1,4 @@
-.section .text.boot
+.section .text.startup
 	ldr pc, resetHandler
 	ldr pc, undefinedHandler
 	ldr pc, swiHandler
@@ -8,7 +8,9 @@
 	ldr pc, irqHandler
 	ldr pc, fiqHandler
 
-resetHandler:     .word start
+.global _start
+_start:
+resetHandler:     .word ResetHandler
 undefinedHandler: .word UndefinedHandler
 swiHandler:       .word SwiHandler
 prefetchHandler:  .word PrefetchHandler
