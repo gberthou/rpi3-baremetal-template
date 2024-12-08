@@ -30,7 +30,6 @@ ARM_CFILES=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm28
 ARM_ASFILES=$(wildcard core/*.s) $(wildcard $(RPIDIR)/*.s) resource/console.s
 ARM_OBJS=$(patsubst %.s,$(OBJDIR)/%.o,$(ARM_ASFILES))
 ARM_OBJS+=$(patsubst %.c,$(OBJDIR)/%.o,$(ARM_CFILES))
-ARM_LDSCRIPT=ldscript.ld
 
 VC4_BIN=$(OBJDIR)/vc4/vc4.bin
 VC4_CFLAGS=-Wall -Wextra -pedantic -Werror -O3
@@ -63,8 +62,8 @@ $(OBJDIR)/%.o : %.c
 $(OBJDIR)/%.o : $(OBJDIR)/%.c
 	$(ARM)gcc $(ARM_CFLAGS) $(INCLUDES) -c $< -o $@ $(ARM_DEFINES)
 
-default: $(ARM_LDSCRIPT) $(ARM_OBJS)
-	$(ARM)gcc $(ARM_LDFLAGS) $(ARM_OBJS) -o $(ARM_BIN).elf -T $(ARM_LDSCRIPT)
+default: $(ARM_OBJS)
+	$(ARM)gcc $(ARM_LDFLAGS) $(ARM_OBJS) -o $(ARM_BIN).elf -Wl,-Ttext,0x8000 -Wl,--section-start=.stack=0x800 -T ldscript.ld
 	$(ARM)objcopy $(ARM_BIN).elf -O binary $(ARM_BIN).img
 	$(ARM)objdump -xd $(ARM_BIN).elf > $(DISASDIR)/$(ARM_BIN)
 

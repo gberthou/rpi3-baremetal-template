@@ -25,7 +25,7 @@ SECTIONS
 
 	.bss : ALIGN(4)
     {
-        __bss_begin = .;
+        __bss_start = .;
 		*(.bss .bss.*)
         . = ALIGN(4);
         __bss_end = .;

@@ -20,24 +20,24 @@ enable_svc_mode:
 ;@ Assumes that the caller is in SVC mode (lr register is banked)
 init_irq:
     cps #0x12         ;@ Switch to IRQ mode
-    ldr sp, #irqstack ;@ Set IRQ stack
+    ldr sp, =irqstack ;@ Set IRQ stack
     cps #0x13         ;@ Switch to SVC mode
 
     ;@ Init interrupt vector base address
     mov r0, #0x8000
     mcr p15, 0, r0, c12, c0, 0 ;@ VBAR
-    
+
     bx lr ;@ Return
 
-.global start
-start:
+.global ResetHandler
+ResetHandler:
     ;@ Assumes that processor is in AArch32 mode, i.e., arm_core & 0x200 == 0
 
     ;@ /!\ RPI 2/3's firmware puts arm core in HYP mode (cps #0x1a) which has
     ;@ another vector than the other arm modes.
 
     ;@ Zero bss section
-    ldr r0, =__bss_begin
+    ldr r0, =__bss_start
     ldr r1, =__bss_end
     mov r2, #0
 bssloop:
@@ -45,10 +45,10 @@ bssloop:
     beq launch
     str r2, [r0], #4
     b bssloop
-    
+
 launch:
     ;@ First, run clock_max_out_arm on a valid stack
-    ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
+    ldr sp, =core0stack     ;@  set sp of core 0 (SVC)
     bl clock_max_out_arm
 
     mov r4, #0x40000000
@@ -69,7 +69,7 @@ launch:
     sev ;@ Signal event to the other cores to ensure  they are awake
     bl enable_svc_mode
     bl init_irq
-    ldr sp, #core0stack     ;@  set sp of core 0 (SVC)
+    ldr sp, =core0stack     ;@  set sp of core 0 (SVC)
     bl main0
 
 done:
@@ -78,27 +78,28 @@ done:
 start_core1:
     bl enable_svc_mode
     bl init_irq
-    ldr sp, #core1stack     ;@  set sp of core 1 (SVC)
+    ldr sp, =core1stack     ;@  set sp of core 1 (SVC)
     bl main1
     b done
 
 start_core2:
     bl enable_svc_mode
     bl init_irq
-    ldr sp, #core2stack     ;@  set sp of core 2 (SVC)
+    ldr sp, =core2stack     ;@  set sp of core 2 (SVC)
     bl main2
     b done
 
 start_core3:
     bl enable_svc_mode
     bl init_irq
-    ldr sp, #core3stack     ;@  set sp of core 3 (SVC)
+    ldr sp, =core3stack     ;@  set sp of core 3 (SVC)
     bl main3
     b done
 
-core0stack: .word 0x00008000
-core1stack: .word 0x00007c00
-core2stack: .word 0x00007800
-core3stack: .word 0x00007400
-
-irqstack: .word 0x00007000
+.section .stack
+.org 0x1000
+irqstack: .space 0x800
+core0stack: .space 0x800
+core1stack: .space 0x800
+core2stack: .space 0x800
+core3stack: .space 0x800
