@@ -19,16 +19,22 @@
 void app_screen_demo(void)
 {
     struct fb_info_t fb;
-    size_t padding;
 
     uart_print_hex(fb_init(&fb, 800, 480));
 
+#ifdef VC4_SUPPORT
     extern uint8_t vc4_bin_contents[];
     uint32_t ret;
     int error = vpu_execute_code_with_stack(256, vc4_bin_contents, (uint32_t) fb.physical_ptr, fb.pitch, WIDTH, HEIGHT, 0, &ret);
+    if(error != 0)
+    {
+        console_print(&fb, 1, 1, "VPU error");
+        console_printhex(&fb, 1, 2, error);
+    }
 
-    padding = (fb.pitch >> 2) - fb.width;
-
+    fb_copy_buffer(&fb);
+#else
+    size_t padding = (fb.pitch >> 2) - fb.width;
     for(size_t frame = 0; ; ++frame)
     {
         uint32_t *ptr = fb.tmp;
@@ -44,14 +50,10 @@ void app_screen_demo(void)
             }
             ptr += padding;
         }
-        if(error != 0)
-        {
-            console_print(&fb, 1, 1, "VPU error");
-            console_printhex(&fb, 1, 2, error);
-        }
 
         fb_copy_buffer(&fb);
     }
+#endif
     for(;;);
 }
 

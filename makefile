@@ -44,7 +44,10 @@ VC4_OBJS+=$(patsubst %.c,$(OBJDIR)/%.o,$(VC4_CFILES))
 VC4_LDSCRIPT=./vc4-toolchain/prefix/vc4-elf/lib/vc4-sim.ld
 VC4_KERNEL_TO_IMPORT=$(OBJDIR)/vc4-kernel.o
 
+ifdef VC4_SUPPORT
+ARM_DEFINES+=-DVC4_SUPPORT
 ARM_OBJS+=$(VC4_KERNEL_TO_IMPORT)
+endif
 
 $(OBJDIR)/vc4/%.o: vc4/%.s
 	$(VC4)as $(VC4_ASLAGS) $< -o $@
@@ -76,4 +79,4 @@ build:
 	mkdir -p $(OBJDIR) $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR) $(OBJDIR)/vc4
 
 clean:
-	rm -f $(ARM_OBJS) $(ARM_BIN) $(VC4_BIN)
+	rm -f $(ARM_OBJS) $(ARM_BIN) $(VC4_BIN) $(VC4_KERNEL_TO_IMPORT)

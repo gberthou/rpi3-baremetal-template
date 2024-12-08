@@ -31,6 +31,9 @@ Simply clone this repo without caring about submodules.
 ## 2. Build
 All the `make`-related commands assume Raspberry Pi 3 by default (`RPI=3`).
 If you want to build for Raspberry Pi 1, specify `RPI=1` with every `make`-related command.
+Additionally, VC4 is absent by default.
+In order to activate it, `VC4_SUPPORT` needs to be defined, for instance
+`VC4_SUPPORT=1`.
 
 For the first build, you'll have to prepare the directories with this command:
 ```console
@@ -40,6 +43,11 @@ make build
 Then, simply run:
 ```console
 make
+```
+
+To use VC4 (cf. 1.1. Complete Initialization), run the following:
+```
+make VC4_SUPPORT=1
 ```
 
 ## 3. Directories
