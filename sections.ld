@@ -1,6 +1,7 @@
 .data :
 {
     __data_start = .;
+    __data_load_start = LOADADDR(.data);
     *(.data .data.* .gnu.linkonce.d.*)
     SORT(CONSTRUCTORS)
     . = ALIGN(4);

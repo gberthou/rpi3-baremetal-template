@@ -42,9 +42,21 @@ ResetHandler:
     mov r2, #0
 bssloop:
     cmp r0, r1
-    beq launch
+    beq bssloopout
     str r2, [r0], #4
     b bssloop
+bssloopout:
+
+    ;@ Copy rodata into data
+    ldr r0, =__data_start
+    ldr r1, =__data_end
+    ldr r2, =__data_load_start
+dataloop:
+    cmp r0, r1
+    beq launch
+    ldr r3, [r2], #4
+    str r3, [r0], #4
+    b dataloop
 
 launch:
     ;@ First, run clock_max_out_arm on a valid stack
