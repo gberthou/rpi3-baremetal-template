@@ -65,7 +65,7 @@ $(OBJDIR)/%.o : $(OBJDIR)/%.c
 default: $(ARM_OBJS)
 	$(ARM)gcc $(ARM_LDFLAGS) $(ARM_OBJS) -o $(ARM_BIN).elf -Wl,-Ttext,0x8000 -Wl,--section-start=.stack=0x800 -T ldscript.ld
 	$(ARM)objcopy $(ARM_BIN).elf -O binary $(ARM_BIN).img
-	$(ARM)objdump -xd $(ARM_BIN).elf > $(DISASDIR)/$(ARM_BIN)
+	$(ARM)objdump -xds $(ARM_BIN).elf > $(DISASDIR)/$(ARM_BIN)
 
 $(OBJDIR)/vc4-kernel.c : $(VC4_BIN)
 	python3 tools/raw2c.py $< > $@
