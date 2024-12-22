@@ -268,4 +268,17 @@ SECTIONS
   .ARM.attributes 0 : { KEEP (*(.ARM.attributes)) KEEP (*(.gnu.attributes)) }
   .note.gnu.arm.ident 0 : { KEEP (*(.note.gnu.arm.ident)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+
+  .exclusive : {
+      . = ALIGN(4096); /* Level3 range for 4kb granule */
+      PROVIDE(__exclusive_start = .);
+      *(.exclusive)
+      PROVIDE(__exclusive_end = .);
+  }
+  .device : {
+      . = ALIGN(4096); /* Level3 range for 4kb granule */
+      PROVIDE(__device_start = .);
+      *(.device)
+      PROVIDE(__device_end = .);
+  }
 }

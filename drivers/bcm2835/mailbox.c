@@ -7,7 +7,9 @@
 #include <string.h>
 
 #include "mailbox.h"
+#include "pointer.h"
 #include <drivers/common.h>
+#include <memutils.h>
 #include <utils.h>
 #include <platform.h>
 
@@ -79,16 +81,17 @@ static uint32_t mailbox_receive(uint8_t channel)
 
 bool mailbox_request(const uint32_t *request, size_t size, mailbox_callback_t callback, void *context)
 {
-    static volatile uint32_t __attribute__((aligned(16))) sequence[64];
+    static volatile uint32_t __attribute__((aligned(16)))
+        __attribute__((section(".device"))) sequence[64];
 
     if(size > sizeof(sequence))
         return false;
 
+    unaligned_vmemcpy(sequence, request, size);
     sequence[0] = size;
-    memcpy((void*)(sequence + 1), request + 1, size - sizeof(sequence[0]));
 
     // Send the requested values
-    mailbox_send(MAILBOX_ID, VIDEOBUS_OFFSET + ((uint32_t)sequence));
+    mailbox_send(MAILBOX_ID, VIDEOBUS_OFFSET + vptr_to_u32(sequence));
     if(mailbox_receive(MAILBOX_ID) == 0 || sequence[1] == MAILBOX_RESPONSE_SUCCESS)
     {
         volatile const uint32_t *ptr = sequence + 2;
