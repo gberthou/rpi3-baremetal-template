@@ -2,6 +2,7 @@
 
 #include "vpu.h"
 #include "mailbox.h"
+#include "pointer.h"
 
 #define MEM_FLAG_DISCARDABLE      (1 << 0) /* can be resized to 0 at any time. Use for cached data */
 #define MEM_FLAG_NORMAL           (0 << 2) /* normal allocating alias. Don't use from ARM */
@@ -80,7 +81,7 @@ struct vpu_mem_t vpu_malloc(size_t size)
         vpu_free(&mem);
         return VPU_MEM_EMPTY;
     }
-    mem.ptr = (void*) address;
+    mem.ptr = u32_to_ptr(address);
     return mem;
 }
 
@@ -143,7 +144,7 @@ int vpu_execute_code(const void *function_pointer, uint32_t r0, uint32_t r1, uin
         0x00030010, // Execute code
         28, // size
         0, // request
-        (uint32_t) function_pointer,
+        ptr_to_u32(function_pointer),
         r0,
         r1,
         r2,
@@ -167,7 +168,7 @@ int vpu_execute_code_with_stack(size_t stack_size, const void *function_pointer,
         return 1;
 
     // 2. Run
-    if(vpu_execute_code(function_pointer, r0, r1, r2, r3, r4, (uint32_t)mem_stack.ptr + stack_size, ret))
+    if(vpu_execute_code(function_pointer, r0, r1, r2, r3, r4, ptr_to_u32(mem_stack.ptr) + stack_size, ret))
         return 2;
 
     // 3. Free stack

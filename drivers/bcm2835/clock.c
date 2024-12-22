@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <drivers/common.h>
+#include <memutils.h>
 
 #include "clock.h"
 #include "mailbox.h"
@@ -21,9 +22,10 @@ static bool clock_max_out_arm_get_cb(const uint32_t *message, void *context)
     return false;
 }
 
-bool clock_max_out_arm(void)
+int clock_max_out_arm(void)
 {
-    const uint32_t request_get[] = {
+    uint32_t request[9];
+    /* Structure:
         0, // Size of the whole structure (ignore)
         0, // Request
 
@@ -34,27 +36,24 @@ bool clock_max_out_arm(void)
         0,
 
         0
-    }; 
-    uint32_t max_clock_rate = 0;
+    */
+    unaligned_memset(request, 0, sizeof(request));
+    request[2] = 0x00030004; // Get max clock rate
+    request[3] = 8; // Size
+    request[5] = CLOCK_ARM;
 
-    if(!mailbox_request(request_get, sizeof(request_get), clock_max_out_arm_get_cb, &max_clock_rate))
+    uint32_t max_clock_rate = 0;
+    // The get command only uses 8 words
+    if(!mailbox_request(request, 8 * sizeof(uint32_t), clock_max_out_arm_get_cb, &max_clock_rate))
         return 1;
 
-    const uint32_t request_set[] = {
-        0, // Size of the whole structure
-        0, // Request
+    unaligned_memset(request, 0, sizeof(request));
+    request[2] = 0x00038002; // Set clock rate
+    request[3] = 12; // Size
+    request[5] = CLOCK_ARM;
+    request[6] = max_clock_rate;
 
-        0x00038002, // Set clock rate
-        12, // Size
-        0, // Request
-        CLOCK_ARM,
-        max_clock_rate,
-        0,
-
-        0
-    };
-
-    if(!mailbox_request(request_set, sizeof(request_set), mailbox_ack, NULL))
+    if(!mailbox_request(request, sizeof(request), mailbox_ack, NULL))
         return 1;
     return 0;
 }

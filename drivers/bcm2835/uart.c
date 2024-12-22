@@ -3,6 +3,7 @@
 
 #include <drivers/common.h>
 #include <platform.h>
+#include <utils.h>
 #include "gpio.h"
 
 #define UART_BASE (PERIPHERAL_BASE + 0x00201000)
@@ -48,13 +49,19 @@ void uart_init_1415(void)
 
 void uart_putc(uint8_t c)
 {
-    while(*FR & 0x20);
+    do
+    {
+        memoryBarrier();
+    } while(*FR & 0x20);
     *DR = c;
 }
 
 uint8_t uart_getc(void)
 {
-    while(*FR & 0x02);
+    do
+    {
+        memoryBarrier();
+    } while(*FR & 0x02);
     return *DR;
 }
 
@@ -63,13 +70,6 @@ void uart_print(const char *str)
     char c;
     while((c = *str++))
         uart_putc(c);
-}
-
-void uart_error(const char *str)
-{
-    uart_print(str);
-    for(;;)
-        __asm__ __volatile__("nop");
 }
 
 static void u64_to_hex(char *dst, uint64_t x)

@@ -5,6 +5,7 @@
 #include <utils.h>
 #include <platform.h>
 #include "dma.h"
+#include "pointer.h"
 
 struct dma_chan_t
 {
@@ -26,6 +27,9 @@ struct dma_chan_t
 
 #define DMA_CHAN_MEMCPY 0
 
+// TODO: Several blocks and/or mutexes for concurrent accesses
+static __attribute__((aligned(256), section(".device"))) struct dma_block_t block;
+
 void dma_enable(size_t channel, size_t value)
 {
     if(value)
@@ -46,18 +50,17 @@ void dma_run_async(size_t channel, const struct dma_block_t *block)
 {
     volatile struct dma_chan_t *ptr = DMAX(channel);
     ptr->cs = 0x80000000; // Reset dma channel
-    ptr->block_addr = VIRT_TO_PHYS((uint32_t) block);
+    ptr->block_addr = VIRT_TO_PHYS(ptr_to_u32(block));
     ptr->cs = 0x00000001; // Activate DMA
 }
 
 void dma_memcpy32(uint32_t *dst, const uint32_t *src, size_t size_bytes)
 {
-    static __attribute__((aligned(256))) struct dma_block_t block;
     block.transfer_info = (1 << 8) // SRC_INC
                         | (1 << 4) // DST_INC
                         ;
-    block.src_addr = VIRT_TO_PHYS((uint32_t) src);
-    block.dst_addr = VIRT_TO_PHYS((uint32_t) dst);
+    block.src_addr = VIRT_TO_PHYS(ptr_to_u32(src));
+    block.dst_addr = VIRT_TO_PHYS(ptr_to_u32(dst));
     block.transfer_len = size_bytes;
     block.stride = 0;
     block.next = 0;
@@ -68,12 +71,11 @@ void dma_memcpy32(uint32_t *dst, const uint32_t *src, size_t size_bytes)
 
 void dma_memcpy32_physical_dst(uint32_t *dst, const uint32_t *src, size_t size_bytes)
 {
-    static __attribute__((aligned(256))) struct dma_block_t block;
     block.transfer_info = (1 << 8) // SRC_INC
                         | (1 << 4) // DST_INC
                         ;
-    block.src_addr = VIRT_TO_PHYS((uint32_t) src);
-    block.dst_addr = (uint32_t) dst;
+    block.src_addr = VIRT_TO_PHYS(ptr_to_u32(src));
+    block.dst_addr = ptr_to_u32(dst);
     block.transfer_len = size_bytes;
     block.stride = 0;
     block.next = 0;

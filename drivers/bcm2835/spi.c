@@ -3,6 +3,7 @@
 #include "spi.h"
 #include "gpio.h"
 #include "dma.h"
+#include "pointer.h"
 
 #define BASE_SPI_FREQ_HZ 250000000u
 
@@ -86,7 +87,7 @@ static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
     .transfer_info = (1 << 8) // SRC_INC
                    ,
     .src_addr = 0,
-    .dst_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+    .dst_addr = PERIPH_TO_PHYS(VPTR_TO_U32(SPI_FIFO)),
     .transfer_len = 0,
     .stride = 0,
     .next = 0
@@ -97,7 +98,7 @@ static struct dma_block_t __attribute__((aligned(256))) block_spi2ram = {
                    | (1 << 10) // SRC_DREQ
                    | (1 << 4) // DST_INC
                    ,
-    .src_addr = PERIPH_TO_PHYS((uint32_t) SPI_FIFO),
+    .src_addr = PERIPH_TO_PHYS(VPTR_TO_U32(SPI_FIFO)),
     .dst_addr = 0,
     .transfer_len = 0,
     .stride = 0,
@@ -113,7 +114,7 @@ void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
         0
     };
 
-    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) dma_payload);
+    block_ram2spi.src_addr = VIRT_TO_PHYS(vptr_to_u32(dma_payload));
     block_ram2spi.transfer_len = sizeof(dma_payload);
     block_spi2ram.transfer_len = sizeof(uint32_t);
 
@@ -121,7 +122,7 @@ void spi_rw_dma32(const uint32_t *rbuffer, uint32_t *wbuffer, size_t size_bytes)
     while(size_words--)
     {
         dma_payload[1] = *rbuffer;
-        block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) (wbuffer++));
+        block_spi2ram.dst_addr = VIRT_TO_PHYS(vptr_to_u32(wbuffer++));
 
         dma_run_async(0, &block_ram2spi);
         dma_run_async(1, &block_spi2ram);
@@ -140,7 +141,7 @@ void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t
         0
     };
 
-    block_ram2spi.src_addr = VIRT_TO_PHYS((uint32_t) dma_payload);
+    block_ram2spi.src_addr = VIRT_TO_PHYS(ptr_to_u32(dma_payload));
     block_ram2spi.transfer_len = sizeof(dma_payload);
     block_spi2ram.transfer_len = sizeof(uint32_t);
 
@@ -148,7 +149,7 @@ void spi_rw_dma32_nonblocking(const uint32_t *rbuffer, uint32_t *wbuffer, size_t
     while(size_words-- && (!stop || !*stop))
     {
         dma_payload[1] = *rbuffer;
-        block_spi2ram.dst_addr = VIRT_TO_PHYS((uint32_t) (wbuffer++));
+        block_spi2ram.dst_addr = VIRT_TO_PHYS(ptr_to_u32(wbuffer++));
 
         dma_run_async(0, &block_ram2spi);
         dma_run_async(1, &block_spi2ram);
