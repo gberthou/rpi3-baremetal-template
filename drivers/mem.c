@@ -5,13 +5,18 @@
 // Assumes that sizeof(type) is a power of 2
 #define ROUND(x, type) (((x) + sizeof(type) - 1) & ~(sizeof(type) - 1))
 
-static size_t heapdata[HEAP_SIZE / sizeof(size_t)] = {HEAP_SIZE};
+static size_t heapdata[HEAP_SIZE / sizeof(size_t)];
 #define HEAPEND ((void*)(((uint8_t*)heapdata) + sizeof(heapdata)))
 
 struct heap_header_t
 {
     size_t size;
 };
+
+void mem_init()
+{
+    heapdata[0] = HEAP_SIZE;
+}
 
 void *malloc(size_t size)
 {
