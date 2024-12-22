@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "mailbox.h"
+#include "pointer.h"
 #include <drivers/common.h>
 #include <utils.h>
 #include <platform.h>
@@ -88,7 +89,7 @@ bool mailbox_request(const uint32_t *request, size_t size, mailbox_callback_t ca
     memcpy((void*)(sequence + 1), request + 1, size - sizeof(sequence[0]));
 
     // Send the requested values
-    mailbox_send(MAILBOX_ID, VIDEOBUS_OFFSET + ((uint32_t)sequence));
+    mailbox_send(MAILBOX_ID, VIDEOBUS_OFFSET + vptr_to_u32(sequence));
     if(mailbox_receive(MAILBOX_ID) == 0 || sequence[1] == MAILBOX_RESPONSE_SUCCESS)
     {
         volatile const uint32_t *ptr = sequence + 2;

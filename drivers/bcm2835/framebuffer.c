@@ -4,6 +4,7 @@
 #include "framebuffer.h"
 #include "mailbox.h"
 #include "dma.h"
+#include "pointer.h"
 
 #define VIDEOBUS_OFFSET 0x80000000
 #define CPU_ADDRESS     0x3e000000
@@ -25,8 +26,8 @@ bool fb_init_cb(const uint32_t *message, void *context)
         case 0x40001:
         {
             uint32_t physical_ptr = message[3];
-            fb->physical_ptr = (void*) physical_ptr;
-            fb->ptr          = (uint32_t*) ((physical_ptr & 0x00ffffff) | CPU_ADDRESS);
+            fb->physical_ptr = u32_to_ptr(physical_ptr);
+            fb->ptr          = u32_to_ptr((physical_ptr & 0x00ffffff) | CPU_ADDRESS);
             break;
         }
 
