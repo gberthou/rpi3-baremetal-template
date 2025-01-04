@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <utils.h>
 #include <app-common/splashscreen.h>
 #include <drivers/mem.h>
 #include <drivers/bcm2835/uart.h>
@@ -7,12 +8,21 @@
 
 #define WAIT_TIME_US 100000
 
+#if __ARM_64BIT_STATE
 static __attribute__((section(".exclusive"))) volatile uint32_t core_data = 0;
+#else
+#define MUTEX_FREE 0
+#define MUTEX_TAKEN 1
+static volatile uint32_t core_data = 0;
+static __attribute__((section(".exclusive"))) volatile uint32_t mutex = MUTEX_FREE;
+#endif
+
 static void atomic_or(volatile uint32_t *dst, uint32_t src)
 {
     // Can use LDSET instead, starting from Armv8.1
 
     uint32_t status = 1;
+#if __ARM_64BIT_STATE
     do
     {
         __asm__ ("ldaxr w2, [%x1]\n"
@@ -28,6 +38,32 @@ static void atomic_or(volatile uint32_t *dst, uint32_t src)
             __asm__("wfe");
     }
     while(status != 0);
+#else
+    // First, claim mutex
+    do
+    {
+        __asm__ __volatile__(
+            "ldrex %0, %1\n" // The fact that MUTEX_TAKEN=1 makes the returned
+                             // value compatible with the status value
+                             // returned by strex
+            "cmp %0, %3\n"
+            "wfene\n" // If the mutex wasn't MUTEX_FREE, wait
+            "strexeq %0, %2, %1" // Else, try to claim it
+            : "=r"(status)
+            : "m"(mutex), "r"(MUTEX_TAKEN), "i"(MUTEX_FREE)
+        );
+    }
+    while(status != 0);
+    memoryBarrier();
+
+    // Then, change value
+    *dst |= src;
+
+    // Finally, release mutex
+    memoryBarrier();
+    mutex = MUTEX_FREE;
+#endif
+    __asm__("sev");
 }
 
 void main0(void)

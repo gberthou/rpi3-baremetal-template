@@ -68,6 +68,7 @@ SECTIONS
   .text           :
   {
     . = ALIGN(16);
+    PROVIDE (__btext = .);
     KEEP(*(.text.startup .text.startup.*))
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
     *(.text.exit .text.exit.*)

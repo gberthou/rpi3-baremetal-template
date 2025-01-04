@@ -80,6 +80,7 @@ void huart_init()
     *UART_CR |= 1;
 }
 
+#if __ARM_64BIT_STATE
 void huart_print_exception(
     uint64_t el,
     uint64_t vbar_index,
@@ -103,3 +104,28 @@ void huart_print_exception(
     put_hex64(far);
     puts_nonewline("\r\n");
 }
+#else
+void huart_print_exception(
+    uint32_t mode,
+    uint32_t vbar_index,
+    uint32_t esr,
+    uint32_t far
+)
+{
+    puts_nonewline("@Mode: ");
+    putc_hex(mode);
+    puts_nonewline("\r\n");
+
+    puts_nonewline("@VBAR_ELx[");
+    put_hex32(vbar_index);
+    puts_nonewline("]\r\n");
+
+    puts_nonewline("ESR_ELx = ");
+    put_hex32(esr);
+    puts_nonewline("\r\n");
+
+    puts_nonewline("FAR_ELx = ");
+    put_hex32(far);
+    puts_nonewline("\r\n");
+}
+#endif

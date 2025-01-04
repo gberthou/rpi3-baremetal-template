@@ -1,37 +1,51 @@
 # Possible values: 1, 3, 4
 RPI ?= 3
-AA64 ?= 0
+AA64 ?= 1
+
 ifeq ($(RPI),1)
+  # RPI1 does not support AArch64
+  override AA64=0
   ARM_CARCH=-march=armv6z
   ARM_ASARCH=-march=armv6z
-  ARM_BIN=kernel
 else ifeq ($(RPI),3)
   ARM_CARCH=-mcpu=cortex-a53+nofp
   ARM_ASARCH=-mcpu=cortex-a53
-  ARM_BIN=kernel7
 else ifeq ($(RPI),4)
   ARM_CARCH=-mcpu=cortex-a72
   ARM_ASARCH=-mcpu=cortex-a72
-  ARM_BIN=kernel8
-  AA64=1
 else
   $(error Invalid RPI value. Try either of the following: 1, 3, 4)
 endif
 
+# Kernel names are documented in that table:
+# https://www.raspberrypi.com/documentation/computers/linux_kernel.html
 ifeq ($(AA64),1)
+  ARM_BIN=kernel8
   ARM=aarch64-none-elf-
   ARM_CFLAGS=
+  ARM_ASFILES=$(wildcard aarch64/*.s)
+  ARM_CFILES=$(wildcard aarch64/*.c)
   INCLUDES=-Iaarch64/include
   START_ADDRESS=0x80000
+  OBJDIR=obj-$(RPI)-aa64
 else
+ifeq ($(RPI),3)
+  ARM_BIN=kernel7
+else ifeq ($(RPI),4)
+  ARM_BIN=kernel7l
+else # Default to RPI1
+  ARM_BIN=kernel
+endif
   ARM=arm-none-eabi-
   ARM_CFLAGS=-mthumb-interwork
+  ARM_ASFILES=$(wildcard aarch32/*.s)
+  ARM_CFILES=$(wildcard aarch32/*.c)
   INCLUDES=-Iaarch32/include
   START_ADDRESS=0x8000
+  OBJDIR=obj-$(RPI)-aa32
 endif
 VC4=vc4-toolchain/prefix/bin/vc4-elf-
 
-OBJDIR=obj-$(RPI)
 DISASDIR=$(OBJDIR)/disas-$(RPI)
 RPIDIR=rpi$(RPI)
 RPIAPPDIR=$(RPIDIR)/app
@@ -39,11 +53,11 @@ RPIAPPDIR=$(RPIDIR)/app
 INCLUDES+=-I. -Iinclude -I$(RPIDIR)
 
 ARM_CFLAGS+=-std=c2x -g -Wall -Wextra -Werror -pedantic -fomit-frame-pointer -nostartfiles -ffreestanding -mgeneral-regs-only $(ARM_CARCH) -O3
-ARM_ASFLAGS=$(ARM_ASARCH)
+ARM_ASFLAGS=$(ARM_ASARCH) --defsym RPI=$(RPI)
 ARM_LDFLAGS=-nostartfiles
 ARM_DEFINES=-DRPI=$(RPI)
-ARM_CFILES=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app-common/*.c) $(wildcard $(RPIDIR)/*.c) $(wildcard $(RPIAPPDIR)/*.c)
-ARM_ASFILES=$(wildcard core/*.s) $(wildcard $(RPIDIR)/*.s) resource/console.s
+ARM_CFILES+=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app-common/*.c) $(wildcard $(RPIDIR)/*.c) $(wildcard $(RPIAPPDIR)/*.c)
+ARM_ASFILES+=$(wildcard core/*.s) $(wildcard $(RPIDIR)/*.s) resource/console.s
 ARM_OBJS=$(patsubst %.s,$(OBJDIR)/%.o,$(ARM_ASFILES))
 ARM_OBJS+=$(patsubst %.c,$(OBJDIR)/%.o,$(ARM_CFILES))
 
@@ -80,8 +94,18 @@ $(OBJDIR)/%.o : $(OBJDIR)/%.c
 
 default: $(ARM_OBJS)
 	$(ARM)gcc $(ARM_LDFLAGS) $(ARM_OBJS) -o $(ARM_BIN).elf -Wl,-Ttext,$(START_ADDRESS) -Wl,--section-start=.stack=0x800 -T ldscript.ld
-	$(ARM)objcopy $(ARM_BIN).elf -O binary $(ARM_BIN).img
 	$(ARM)objdump -xds $(ARM_BIN).elf > $(DISASDIR)/$(ARM_BIN)
+	$(ARM)objcopy $(ARM_BIN).elf -O binary $(ARM_BIN).img
+
+ifeq ($(AA64),0)
+ifneq ($(RPI),1)
+	# qemu for RPI2 loads the kernel at 0x10000 whereas the real hardware loads
+	# it at 0x8000. Here, a qemu-specific elf/img pair is generated to
+	# accomodate to that.
+	$(ARM)gcc $(ARM_LDFLAGS) $(ARM_OBJS) -o $(ARM_BIN)-qemu.elf -Wl,-Ttext,0x10000 -Wl,--section-start=.stack=0x800 -T ldscript.ld
+	$(ARM)objcopy $(ARM_BIN)-qemu.elf -O binary $(ARM_BIN)-qemu.img
+endif
+endif
 
 $(OBJDIR)/vc4-kernel.c : $(VC4_BIN)
 	python3 tools/raw2c.py $< > $@
@@ -91,16 +115,28 @@ $(VC4_BIN): $(VC4_LDSCRIPT) $(VC4_OBJS)
 	$(VC4)objcopy -O binary $@.bin $@
 
 build:
-	mkdir -p $(OBJDIR) $(OBJDIR)/aarch64 $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR) $(OBJDIR)/vc4
+	mkdir -p $(OBJDIR) $(OBJDIR)/aarch32 $(OBJDIR)/aarch64 $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR) $(OBJDIR)/vc4
 
 qemu:
 ifeq ($(RPI),1)
-	qemu-system-arm -s -S -serial mon:stdio -M raspi1ap -smp 1 -m 512M -cpu arm1176 -bios kernel.img -device loader,addr=$(START_ADDRESS),cpu-num=0
+	qemu-system-arm -s -S -serial mon:stdio -M raspi1ap -smp 1 -m 512M -cpu arm1176 -bios $(ARM_BIN).img -device loader,addr=$(START_ADDRESS),cpu-num=0
 else ifeq ($(RPI),3)
-	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi2b -smp 4 -m 1G -cpu cortex-a53 -bios kernel7.img -device loader,addr=$(START_ADDRESS),cpu-num=0
+# qemu for RPI3 only supports AArch64 so RPI2 platform will be used for AArch32
+# kernels.
+ifeq ($(AA64),0)
+	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi2b -smp 4 -m 1G -cpu cortex-a53 -kernel $(ARM_BIN)-qemu.img
+else
+	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi3b -smp 4 -m 1G -cpu cortex-a53 -kernel $(ARM_BIN).img
+endif
 else ifeq ($(RPI),4)
-	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi4b -smp 4 -m 2G -cpu cortex-a72 -kernel kernel8.img
+# qemu for RPI4 only supports AArch64 so RPI2 platform will be used for AArch32
+# kernels.
+ifeq ($(AA64),0)
+	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi2b -smp 4 -m 1G -cpu cortex-a72 -kernel $(ARM_BIN)-qemu.img
+else
+	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi4b -smp 4 -m 2G -cpu cortex-a72 -kernel $(ARM_BIN).img
+endif
 endif
 
 clean:
-	rm -f $(ARM_OBJS) $(ARM_BIN) $(VC4_BIN) $(VC4_KERNEL_TO_IMPORT)
+	rm -f $(ARM_OBJS) $(ARM_BIN).elf $(ARM_BIN).img $(ARM_BIN)-qemu.elf $(ARM_BIN)-qemu.img $(VC4_BIN) $(VC4_KERNEL_TO_IMPORT)

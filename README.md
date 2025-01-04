@@ -30,16 +30,28 @@ Simply clone this repo without caring about submodules.
 ## 2. Build
 All the `make`-related commands assume Raspberry Pi 3 by default (`RPI=3`).
 If you want to build for Raspberry Pi 1 or 4, respectively specify `RPI=1` or `RPI=4` with every `make`-related command.
-This even applies to `make build RPI=...` and `make clean RPI=...` as the build directories and generated files are not the same based on which Rasperry Pi you are building an image for.
+By default, the target ISA will be AArch64, except for the Raspberry Pi 1 which only supports AArch32.
+To build for AArch64 (default), set `AA64=1`; otherwise set `AA64=0` to build for AArch32.
+Please note that both `RPI=3 AA64=1` and `RPI=4 AA64=1` will generate and overwrite `kernel8.img`, as show in the table below:
+
+| Makefile configuration  | Kernel filename  |
+|-------------------------|------------------|
+| RPI=1                   | kernel.img       |
+| RPI=3 AA64=0            | kernel7.img      |
+| RPI=3 AA64=1            | kernel8.img      |
+| RPI=4 AA64=0            | kernel7l.img     |
+| RPI=4 AA64=1            | kernel8.img      |
+
+This even applies to `make build RPI=... AA64=...` and `make clean RPI=... AA64=...` as the build directories and generated files are not the same based on which Rasperry Pi and architecture you are building an image for.
 
 For the first build, you'll have to prepare the directories with this command:
 ```console
-make build RPI=...
+make build RPI=... AA64=...
 ```
 
 Then, simply run:
 ```console
-make RPI=...
+make RPI=... AA64=...
 ```
 
 Additionally, VC4 is absent by default.
@@ -47,7 +59,7 @@ In order to activate it, `VC4_SUPPORT` needs to be defined, for instance
 `VC4_SUPPORT=1`.
 To use VC4 (cf. 1.1. Complete Initialization), run the following:
 ```
-make VC4_SUPPORT=1 RPI=...
+make VC4_SUPPORT=1 RPI=... AA64=...
 ```
 
 ## 3. Simulation on host (qemu)
@@ -56,7 +68,7 @@ It might be possible that the qemu binaries have another name on your filesystem
 
 To run qemu and the gdb server:
 ```
-make qemu RPI=...
+make qemu RPI=... AA64=...
 ```
 
 To connect to the gdb server from another terminal (AArch32):
@@ -78,7 +90,7 @@ target remote :1234
  - `app-common`: app code, abstracted from the target platform.
  - `rpi<n>`: specific low-level code and constants for Raspberry Pi `<n>`.
  - `rpi<n>/app`: specific app code for Raspberry Pi `<n>`.
- - `aarch<32|64>`: architecture-specific helpers.
+ - `aarch<32|64>`: architecture-specific boot code and helpers.
  - `core`: interrupt vector and handler definitions.
  - `drivers`: provides a handful of simple yet uncomplete drivers.
  - `include`: useful inline utils to replace stdlib functions with your own assumptions.
