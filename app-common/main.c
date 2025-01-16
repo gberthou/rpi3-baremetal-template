@@ -87,6 +87,7 @@ void main0(void)
     app_screen_demo();
 }
 
+#if RPI > 1
 void main1(void)
 {
     /* This code is going to be run on core 1 */
@@ -119,3 +120,4 @@ void main3(void)
         __asm__("wfe");
     }
 }
+#endif

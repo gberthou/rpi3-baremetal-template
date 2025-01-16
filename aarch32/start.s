@@ -122,11 +122,7 @@ launch:
     clrex
 
     ldr r0, =core0stack
-.if RPI > 1
     ldr r1, =main0
-.else
-    ldr r1, =main
-.endif
 
 // r0: stack pointer
 // r1: main address

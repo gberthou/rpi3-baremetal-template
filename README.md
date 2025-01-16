@@ -89,7 +89,6 @@ target remote :1234
 
  - `app-common`: app code, abstracted from the target platform.
  - `rpi<n>`: specific low-level code and constants for Raspberry Pi `<n>`.
- - `rpi<n>/app`: specific app code for Raspberry Pi `<n>`.
  - `aarch<32|64>`: architecture-specific boot code and helpers.
  - `core`: interrupt vector and handler definitions.
  - `drivers`: provides a handful of simple yet uncomplete drivers.
