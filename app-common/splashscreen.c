@@ -13,13 +13,13 @@
 
 #define GPIO_TEST 26
 #define WIDTH 800
-#define HEIGHT 480
+#define HEIGHT 600
 
 void app_screen_demo(void)
 {
     struct fb_info_t fb;
 
-    uart_print_hex(fb_init(&fb, 800, 480));
+    uart_print_hex(fb_init(&fb, WIDTH, HEIGHT));
 
 #ifdef VC4_SUPPORT
     extern uint8_t vc4_bin_contents[];
@@ -37,13 +37,13 @@ void app_screen_demo(void)
     for(size_t frame = 0; ; ++frame)
     {
         uint32_t *ptr = fb.tmp;
-        for(uint32_t y = 0; y < 480; ++y)
+        for(uint32_t y = 0; y < fb.height; ++y)
         {
-            uint8_t Y = (y * 255) / 480 - frame;
+            uint8_t Y = (y * 255) / fb.height - frame;
             uint32_t color = ((Y << 16) | ((frame & 0xff) << 8) | 0xff);
-            for(uint32_t x = 0; x < 640; ++x)
+            for(uint32_t x = 0; x < fb.width; ++x)
             {
-                uint8_t X = (x * 255) / 640 - frame;
+                uint8_t X = (x * 255) / fb.width - frame;
                 color |= (X << 24);
                 *ptr++ = color;
             }
