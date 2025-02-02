@@ -306,13 +306,28 @@ void mmu_init_descriptors()
     // Add peripheral/device section
     add_pages(
         PERIPHERAL_BASE,
+#if RPI < 5
         PERIPHERAL_BASE + 0x1000000,
+#else
+        PERIPHERAL_BASE + 0x4000000,
+#endif
         descriptor_block_attributes(
             INDEX_ATTR_DEVICE,
             SH_NON_SHAREABLE,
             false
         )
     );
+#if RPI >= 5
+    add_pages(
+        RP1_BASE,
+        RP1_BASE + 0x200000,
+        descriptor_block_attributes(
+            INDEX_ATTR_DEVICE,
+            SH_NON_SHAREABLE,
+            false
+        )
+    );
+#endif
     add_pages(
         0x3e000000,
         0x3f000000,

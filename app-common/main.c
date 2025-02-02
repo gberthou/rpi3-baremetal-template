@@ -19,10 +19,9 @@ static __attribute__((section(".exclusive"))) volatile uint32_t mutex = MUTEX_FR
 
 static void atomic_or(volatile uint32_t *dst, uint32_t src)
 {
-    // Can use LDSET instead, starting from Armv8.1
-
-    uint32_t status = 1;
 #if __ARM_64BIT_STATE
+#if RPI < 5
+    uint32_t status = 1;
     do
     {
         __asm__ ("ldaxr w2, [%x1]\n"
@@ -32,13 +31,18 @@ static void atomic_or(volatile uint32_t *dst, uint32_t src)
                  : "r"(dst), "r"(src)
                  : "w2"
         );
-        if (status == 0)
-            __asm__("sev");
-        else
+        if (status != 0)
             __asm__("wfe");
     }
     while(status != 0);
+    __asm__("sev");
 #else
+    __asm__("ldset %x0, xzr, [%x1]"
+            :: "r"(src), "r"(dst)
+    );
+#endif
+#else
+    uint32_t status = 1;
     // First, claim mutex
     do
     {
@@ -62,8 +66,8 @@ static void atomic_or(volatile uint32_t *dst, uint32_t src)
     // Finally, release mutex
     memoryBarrier();
     mutex = MUTEX_FREE;
-#endif
     __asm__("sev");
+#endif
 }
 
 void main0(void)

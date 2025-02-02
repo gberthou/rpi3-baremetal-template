@@ -2,11 +2,17 @@
 #include <stddef.h>
 
 #include <drivers/common.h>
+#include <drivers/gpio.h>
 #include <platform.h>
 #include <utils.h>
-#include "gpio.h"
 
+#if RPI < 5
 #define UART_BASE (PERIPHERAL_BASE + 0x00201000)
+#define GPIO_FUNC GPIO_ALT0
+#else
+#define UART_BASE (RP1_BASE + 0x30000)
+#define GPIO_FUNC GPIO_ALT4
+#endif
 
 #define GPIO_TX 14
 #define GPIO_RX 15
@@ -34,8 +40,8 @@ void uart_init_1415(void)
 {
     *CR = 0x00;
 
-    gpio_select_function(GPIO_TX, GPIO_ALT0);
-    gpio_select_function(GPIO_RX, GPIO_ALT0);
+    gpio_select_function(GPIO_TX, GPIO_FUNC);
+    gpio_select_function(GPIO_RX, GPIO_FUNC);
 
     gpio_set_resistor(GPIO_TX, GPIO_RESISTOR_NONE);
     gpio_set_resistor(GPIO_RX, GPIO_RESISTOR_NONE);

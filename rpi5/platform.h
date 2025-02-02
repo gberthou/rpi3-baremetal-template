@@ -1,0 +1,7 @@
+#ifndef PLATFORM_H
+#define PLATFORM_H
+
+#define PERIPHERAL_BASE 0x1000000000
+#define RP1_BASE 0x1f00000000
+
+#endif

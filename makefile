@@ -1,5 +1,5 @@
-# Possible values: 1, 3, 4
-RPI ?= 3
+# Possible values: 1, 3, 4, 5
+RPI ?= 5
 AA64 ?= 1
 
 ifeq ($(RPI),1)
@@ -13,14 +13,22 @@ else ifeq ($(RPI),3)
 else ifeq ($(RPI),4)
   ARM_CARCH=-mcpu=cortex-a72
   ARM_ASARCH=-mcpu=cortex-a72
+else ifeq ($(RPI),5)
+  override AA64=1
+  ARM_CARCH=-mcpu=cortex-a76
+  ARM_ASARCH=-mcpu=cortex-a76
 else
-  $(error Invalid RPI value. Try either of the following: 1, 3, 4)
+  $(error Invalid RPI value. Try either of the following: 1, 3, 4, 5)
 endif
 
 # Kernel names are documented in that table:
 # https://www.raspberrypi.com/documentation/computers/linux_kernel.html
 ifeq ($(AA64),1)
+ifeq ($(RPI),5)
+  ARM_BIN=kernel_2712
+else
   ARM_BIN=kernel8
+endif
   ARM=aarch64-none-elf-
   ARM_CFLAGS=
   ARM_ASFILES=$(wildcard aarch64/*.s)
@@ -57,6 +65,12 @@ ARM_ASFLAGS=$(ARM_ASARCH) --defsym RPI=$(RPI)
 ARM_LDFLAGS=-nostartfiles
 ARM_DEFINES=-DRPI=$(RPI)
 ARM_CFILES+=$(wildcard core/*.c) $(wildcard drivers/*.c) $(wildcard drivers/bcm2835/*.c) $(wildcard drivers/adc/*.c) $(wildcard drivers/virtual/*.c) $(wildcard app-common/*.c) $(wildcard $(RPIDIR)/*.c) $(wildcard $(RPIAPPDIR)/*.c)
+ifeq ($(RPI), 5)
+  ARM_CFILES:=$(filter-out drivers/bcm2835/gpio.c,$(ARM_CFILES))
+  ARM_CFILES:=$(filter-out drivers/bcm2835/clock.c,$(ARM_CFILES))
+  ARM_CFILES+=$(wildcard drivers/rp1/*.c)
+endif
+
 ARM_ASFILES+=$(wildcard core/*.s) $(wildcard $(RPIDIR)/*.s) resource/console.s
 ARM_OBJS=$(patsubst %.s,$(OBJDIR)/%.o,$(ARM_ASFILES))
 ARM_OBJS+=$(patsubst %.c,$(OBJDIR)/%.o,$(ARM_CFILES))
@@ -115,7 +129,7 @@ $(VC4_BIN): $(VC4_LDSCRIPT) $(VC4_OBJS)
 	$(VC4)objcopy -O binary $@.bin $@
 
 build:
-	mkdir -p $(OBJDIR) $(OBJDIR)/aarch32 $(OBJDIR)/aarch64 $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR) $(OBJDIR)/vc4
+	mkdir -p $(OBJDIR) $(OBJDIR)/aarch32 $(OBJDIR)/aarch64 $(OBJDIR)/core $(OBJDIR)/app-common $(OBJDIR)/drivers $(OBJDIR)/drivers/adc $(OBJDIR)/drivers/bcm2835 $(OBJDIR)/drivers/rp1 $(OBJDIR)/drivers/virtual $(OBJDIR)/resource $(DISASDIR) $(OBJDIR)/$(RPIDIR) $(OBJDIR)/$(RPIAPPDIR) $(OBJDIR)/vc4
 
 qemu:
 ifeq ($(RPI),1)
@@ -136,6 +150,8 @@ ifeq ($(AA64),0)
 else
 	qemu-system-aarch64 -s -S -serial mon:stdio -M raspi4b -smp 4 -m 2G -cpu cortex-a72 -kernel $(ARM_BIN).img
 endif
+else ifeq ($(RPI),5)
+	echo "No support yet"
 endif
 
 clean:

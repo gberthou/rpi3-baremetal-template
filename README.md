@@ -1,6 +1,6 @@
 # rpi3-baremetal-template
 
-This is a simple template for baremetal C programming for Raspberry Pi 1, 3 and 4.
+This is a simple template for baremetal C programming for Raspberry Pi 1, 3, 4 and 5.
 
 ## 1. Initialization
 First, you have to figure out what you want to do with this template.
@@ -28,8 +28,8 @@ cd vc4-toolchain && ./build-all.sh 2>&1 # cf. vc4-toolchain/README.md
 Simply clone this repo without caring about submodules.
 
 ## 2. Build
-All the `make`-related commands assume Raspberry Pi 3 by default (`RPI=3`).
-If you want to build for Raspberry Pi 1 or 4, respectively specify `RPI=1` or `RPI=4` with every `make`-related command.
+All the `make`-related commands assume Raspberry Pi 5 by default (`RPI=5`).
+If you want to build for Raspberry Pi 1, 3 or 4, respectively specify `RPI=1`, `RPI=3` or `RPI=4` with every `make`-related command.
 By default, the target ISA will be AArch64, except for the Raspberry Pi 1 which only supports AArch32.
 To build for AArch64 (default), set `AA64=1`; otherwise set `AA64=0` to build for AArch32.
 Please note that both `RPI=3 AA64=1` and `RPI=4 AA64=1` will generate and overwrite `kernel8.img`, as show in the table below:
@@ -41,6 +41,7 @@ Please note that both `RPI=3 AA64=1` and `RPI=4 AA64=1` will generate and overwr
 | RPI=3 AA64=1            | kernel8.img      |
 | RPI=4 AA64=0            | kernel7l.img     |
 | RPI=4 AA64=1            | kernel8.img      |
+| RPI=5                   | kernel\_2712.img |
 
 This even applies to `make build RPI=... AA64=...` and `make clean RPI=... AA64=...` as the build directories and generated files are not the same based on which Rasperry Pi and architecture you are building an image for.
 
@@ -90,14 +91,14 @@ target remote :1234
  - `app-common`: app code, abstracted from the target platform.
  - `rpi<n>`: specific low-level code and constants for Raspberry Pi `<n>`.
  - `aarch<32|64>`: architecture-specific boot code and helpers.
- - `core`: interrupt vector and handler definitions.
+ - `core`: interrupt vector, handler definitions and core-specific helpers.
  - `drivers`: provides a handful of simple yet uncomplete drivers.
  - `include`: useful inline utils to replace stdlib functions with your own assumptions.
 
-## 4. Multi-core (RPI 3 and 4)
+## 4. Multi-core (RPI >= 3)
 
 Each core can run its own program.
-The source code has to provide `main0`, `main1`, `main2`, `main3` functions as shown in `rpi3/app/main.c`.
+The source code has to provide `main0`, `main1`, `main2`, `main3` functions as shown in `app-common/main.c`.
 They will run respectively on cores 0, 1, 2 and 3.
 
 For [AArch64](https://en.wikipedia.org/wiki/AArch64) images, Raspberry Pi's

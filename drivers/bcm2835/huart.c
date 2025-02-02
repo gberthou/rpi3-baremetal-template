@@ -18,10 +18,19 @@
 #define put_hex32(x) put_hex(x, 28)
 #define put_hex64(x) put_hex(x, 60)
 
+#if RPI < 5
+#define GPIO_BASE (PERIPHERAL_BASE + 0x00200000)
+#define UART_BASE (PERIPHERAL_BASE + 0x00201000)
+#else
+#define GPIO_BASE (RP1_BASE + 0xd0000)
+#define PADS_BASE (RP1_BASE + 0xf0000)
+#define UART_BASE (RP1_BASE + 0x30000)
+#endif
+
 static inline void putc(char c)
 {
-    volatile uint32_t * const UART_DR = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201000);
-    volatile uint32_t * const UART_FR = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201018);
+    volatile uint32_t * const UART_DR = (volatile uint32_t*) (UART_BASE);
+    volatile uint32_t * const UART_FR = (volatile uint32_t*) (UART_BASE + 0x18);
 
     do
     {
@@ -58,15 +67,24 @@ void huart_init()
 {
     // GPIO resistor management is different on BCM2835 and BCM2711, so let's
     // keep it simple here for portability purposes.
-    volatile uint32_t * const GPFSEL1 = (volatile uint32_t*) (PERIPHERAL_BASE + 0x200004);
-
-    volatile uint32_t * const UART_IBRD = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201024);
-    volatile uint32_t * const UART_FBRD = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201028);
-    volatile uint32_t * const UART_LCRH = (volatile uint32_t*) (PERIPHERAL_BASE + 0x20102c);
-    volatile uint32_t * const UART_CR = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201030);
-    volatile uint32_t * const UART_ICR = (volatile uint32_t*) (PERIPHERAL_BASE + 0x201044);
-
+#if RPI < 5
+    volatile uint32_t * const GPFSEL1 = (volatile uint32_t*) (GPIO_BASE + 0x4);
     *GPFSEL1 = 0x24000; // TX.14 and RX.15 in ALT0 mode
+#else
+    volatile uint32_t * const GPIO14_CTRL = (volatile uint32_t*) (GPIO_BASE + 0x74);
+    volatile uint32_t * const GPIO15_CTRL = (volatile uint32_t*) (GPIO_BASE + 0x7c);
+    volatile uint32_t * const PADS_BANK0 = (volatile uint32_t*) (PADS_BASE + 0x4);
+    *GPIO14_CTRL = 4; // TX.14 in a4 mode
+    *GPIO15_CTRL = 4; // RX.15 in a4 mode
+    PADS_BANK0[14] = (1 << 4) | (1 << 1); // Clear output disable
+    PADS_BANK0[15] = (1 << 6) | (1 << 4) | (1 << 1); // Set input enable
+#endif
+
+    volatile uint32_t * const UART_IBRD = (volatile uint32_t*) (UART_BASE + 0x24);
+    volatile uint32_t * const UART_FBRD = (volatile uint32_t*) (UART_BASE + 0x28);
+    volatile uint32_t * const UART_LCRH = (volatile uint32_t*) (UART_BASE + 0x2c);
+    volatile uint32_t * const UART_CR = (volatile uint32_t*) (UART_BASE + 0x30);
+    volatile uint32_t * const UART_ICR = (volatile uint32_t*) (UART_BASE + 0x44);
 
     *UART_CR = 0x0;
     *UART_ICR = 0x7ff;

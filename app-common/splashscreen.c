@@ -2,13 +2,12 @@
 
 #include "../core/irq.h"
 
+#include <drivers/gpio.h>
 #include <drivers/bcm2835/interrupt.h>
-#include <drivers/bcm2835/gpio.h>
 #include <drivers/bcm2835/uart.h>
 #include <drivers/bcm2835/systimer.h>
 #include <drivers/bcm2835/framebuffer.h>
 #include <drivers/bcm2835/spi.h>
-#include <drivers/bcm2835/clock.h>
 #include <drivers/bcm2835/vpu.h>
 #include <drivers/virtual/console.h>
 
@@ -59,9 +58,15 @@ void app_screen_demo(void)
 
 void app_init_gpio(void)
 {
-    gpio_select_function(GPIO_TEST, GPIO_INPUT);
+    gpio_select_function(GPIO_TEST,
+#if RPI < 5
+        GPIO_INPUT
+#else
+        GPIO_PIO
+#endif
+    );
     gpio_set_resistor(GPIO_TEST, GPIO_RESISTOR_PULLUP);
-    gpio_set_async_edge_detect(GPIO_TEST, GPIO_FALLING_EDGE, 1);
+    //gpio_set_async_edge_detect(GPIO_TEST, GPIO_FALLING_EDGE, 1);
 
     interrupt_enable(INT_SOURCE_GPIO);
 }

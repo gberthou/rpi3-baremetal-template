@@ -102,6 +102,6 @@ void fb_put_color(struct fb_info_t *fb, uint32_t x, uint32_t y, uint32_t color)
 
 void fb_copy_buffer(struct fb_info_t *fb)
 {
-    dma_memcpy32_physical_dst(fb->physical_ptr, fb->tmp, fb->ptr_size);
+    dma_memcpy32(fb->physical_ptr, fb->tmp, fb->ptr_size);
 }
 

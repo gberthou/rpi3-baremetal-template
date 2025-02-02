@@ -19,9 +19,15 @@
 #define MAIL_EMPTY (1u << 30)
 #define MAIL_FULL  (1u << 31)
 
-#define MAIL0_READ   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b880))
-#define MAIL0_STATUS ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b898))
-#define MAIL0_WRITE  ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0000b8A0))
+#if RPI < 5
+#define MAILBOX_BASE (PERIPHERAL_BASE + 0xb880)
+#else
+#define MAILBOX_BASE (PERIPHERAL_BASE + 0x13880)
+#endif
+
+#define MAIL0_READ   ((volatile uint32_t*) MAILBOX_BASE)
+#define MAIL0_STATUS ((volatile uint32_t*) (MAILBOX_BASE + 0x18))
+#define MAIL0_WRITE  ((volatile uint32_t*) (MAILBOX_BASE + 0x20))
 
 static inline void wait_for_mailbox_non_full(void)
 {

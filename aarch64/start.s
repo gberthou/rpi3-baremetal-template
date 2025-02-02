@@ -20,6 +20,61 @@
     .endif
 .endm
 
+.macro unlock_cores_legacy, n_core_max
+.macro load_core_address, number
+    adr x5, start_core\number
+.endm
+    mov x4, #0xe0
+
+    .altmacro
+    .set i, 1
+    .rept \n_core_max
+        load_core_address %i
+        str w5, [x4, #(8 * (i - 1))]
+        .set i, i+1
+    .endr
+    dsb sy
+.endm
+
+.macro unlock_cores, n_core_max
+    /* https://github.com/raspberrypi/arm-trusted-firmware/blob/332b62e0443b004287d2cfc032a70bba6fb86f35/plat/rpi/common/aarch64/plat_helpers.S
+     * https://github.com/raspberrypi/arm-trusted-firmware/blob/332b62e0443b004287d2cfc032a70bba6fb86f35/plat/rpi/rpi5/include/platform_def.h
+    */
+    mov x0, #0x100 // PLAT_RPI3_TM_ENTRYPOINT
+    mov x1, #1
+    adr x2, start_secondary_core
+    str x2, [x0], #16
+    dsb sy
+
+    mov x2, #1 // x2 = next core to wake up
+1:
+    str x1, [x0], #8 // PLAT_RPI3_TM_HOLD_BASE[x]
+    add x2, x2, #1
+    cmp x2, #\n_core_max
+    ble 1b
+    dsb sy
+    sev
+.endm
+
+.macro restart_from_el3_to_el2
+    mrs x0, CurrentEL
+    and x0, x0, #0xc
+    cmp x0, #0xc
+    bne 1f
+    mrs x0, SCR_EL3
+    orr x0, x0, #(1 << 18) // EEL2
+    orr x0, x0, #(1 << 10) // RW
+    orr x0, x0, #(1 << 0) // NS
+    msr SCR_EL3, x0
+    mov x0, #0x9 // EL2
+    msr SPSR_EL3, x0
+    adr x0, start_secondary_core
+    msr ELR_EL3, x0
+    isb
+    eret
+1:
+.endm
+
 .section .text.armvector
 .align 5
 // VBAR_EL2
@@ -70,26 +125,18 @@ launch:
     // First, run clock_max_out_arm on a valid stack
     adr x0, core0stack
     mov sp, x0 // set sp of core 0
+
     bl clock_max_out_arm
     bl mmu_init_descriptors
 
-    mov x4, #0xe0
-
-    adr x5, start_core1
-    // Comment out to "disable" core 1
-    str w5, [x4]
-
-    adr x5, start_core2
-    // Comment out to "disable" core 2
-    str w5, [x4, #0x8]
-
-    adr x5, start_core3
-    // Comment out to "disable" core 3
-    str w5, [x4, #0x10]
-
-    // This portion of code is only run by core 0
-    sev // Signal event to the other cores to ensure they are awake
     clrex
+
+    // Unlock cores 1, 2, 3
+.if RPI < 5
+    unlock_cores_legacy 3
+.else
+    unlock_cores 3
+.endif
 
     // Branch to main0 into EL1 instead of EL2 using ERET
     adr x0, core0stack
@@ -125,6 +172,32 @@ branch_to_main:
     msr CPACR_EL1, x0 // The compiler tends to generate SIMD instructions for
                       // copies (strcpy, etc.)
     eret
+
+.if RPI >= 5
+start_secondary_core:
+    restart_from_el3_to_el2
+    mrs x0, MPIDR_EL1
+    lsr x0, x0, #8
+    and x0, x0, #0xff // x0 = MPIDR_EL1.Aff1 (core number)
+    cmp x0, #0
+    beq unknown_core // Core 0 is supposed to be the primary core, so it's not
+                     // Expected to be 0 here
+    cmp x0, #4 // Only cores 0-3 are expected here
+    bge unknown_core
+
+    adr x1, jump_vector
+    sub x0, x0, #1
+    lsl x0, x0, #2
+    add x1, x1, x0
+    br x1
+jump_vector:
+    b start_core1
+    b start_core2
+    b start_core3
+unknown_core:
+    wfe
+    b unknown_core
+.endif
 
 start_core1:
     adr x0, core1stack

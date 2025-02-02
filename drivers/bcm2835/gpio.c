@@ -2,18 +2,24 @@
 #include <stddef.h>
 
 #include <drivers/common.h>
+#include <drivers/gpio.h>
 #include <platform.h>
-#include "gpio.h"
 
-#define GPFSEL0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200000))
-#define GPSET0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020001C))
-#define GPCLR0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200028))
-#define GPLEV0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200034))
-#define GPPUD     ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200094))
-#define GPPUDCLK0 ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200098))
-#define GPAREN0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x0020007C))
-#define GPAFEN0   ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200088))
-#define GPEDS0    ((volatile uint32_t*) (PERIPHERAL_BASE + 0x00200040))
+#if RPI < 5
+#define GPIO_BASE (PERIPHERAL_BASE + 0x00200000)
+#define GPFSEL0   ((volatile uint32_t*) (GPIO_BASE + 0x00))
+#define GPSET0    ((volatile uint32_t*) (GPIO_BASE + 0x1c))
+#define GPCLR0    ((volatile uint32_t*) (GPIO_BASE + 0x28))
+#define GPLEV0    ((volatile uint32_t*) (GPIO_BASE + 0x34))
+#define GPPUD     ((volatile uint32_t*) (GPIO_BASE + 0x94))
+#define GPPUDCLK0 ((volatile uint32_t*) (GPIO_BASE + 0x98))
+#define GPAREN0   ((volatile uint32_t*) (GPIO_BASE + 0x7c))
+#define GPAFEN0   ((volatile uint32_t*) (GPIO_BASE + 0x88))
+#define GPEDS0    ((volatile uint32_t*) (GPIO_BASE + 0x40))
+#else
+#define GPIO_BASE (RP1_BASE + 0xd0000)
+#define PADS_BASE (RP1_BASE + 0xf0000)
+#endif
 
 void gpio_select_function(unsigned int gpio, enum gpio_function_e function)
 {
@@ -92,4 +98,3 @@ void gpio_ack_interrupt(unsigned int gpio)
 
     GPEDS0[offset] = mask;
 }
-

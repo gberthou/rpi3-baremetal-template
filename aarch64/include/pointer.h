@@ -22,5 +22,10 @@ static inline void *u32_to_ptr(uint32_t x)
     return (void*) y;
 }
 
+static inline uint64_t ptr_to_integer(const void *ptr)
+{
+    return (uint64_t) ptr;
+}
+
 #endif // AARCH64_POINTER_H
 

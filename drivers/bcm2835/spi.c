@@ -1,7 +1,7 @@
 #include <drivers/common.h>
+#include <drivers/gpio.h>
 #include <platform.h>
 #include "spi.h"
-#include "gpio.h"
 #include "dma.h"
 #include "pointer.h"
 
@@ -43,6 +43,8 @@ uint32_t spi_init(uint32_t desiredFreq, enum spi_cs_mode_e csmode, enum spi_data
         return 1;
 
     // Configure gpios for slave 0
+    // Function is ALT0 for both BCM2835 and RP1, although the constants have
+    // different values
     gpio_select_function(GPIO_CE0, GPIO_ALT0);
     gpio_select_function(GPIO_MOSI0, GPIO_ALT0);
     gpio_select_function(GPIO_MISO0, GPIO_ALT0);
@@ -83,7 +85,7 @@ void spi_rw_buffer(const void *rbuffer, void *wbuffer, size_t size)
     *SPI_CS = cs_config_nodma;
 }
 
-static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
+static struct dma_dmalite_block_t __attribute__((aligned(32))) block_ram2spi = {
     .transfer_info = (1 << 8) // SRC_INC
                    ,
     .src_addr = 0,
@@ -93,7 +95,7 @@ static struct dma_block_t __attribute__((aligned(256))) block_ram2spi = {
     .next = 0
 };
 
-static struct dma_block_t __attribute__((aligned(256))) block_spi2ram = {
+static struct dma_dmalite_block_t __attribute__((aligned(32))) block_spi2ram = {
     .transfer_info = (SPI_RX << 16) // PERMAP
                    | (1 << 10) // SRC_DREQ
                    | (1 << 4) // DST_INC
